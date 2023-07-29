@@ -519,7 +519,7 @@ contract MarketplaceCustodial is
         else if (order.standard == type(IERC1155).interfaceId)
             ERC1155(order.contractAddress).safeTransferFrom(
                 address(this),
-                msg.sender,
+                order.buyer,
                 order.tokenId,
                 1,
                 ""
