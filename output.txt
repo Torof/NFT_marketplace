@@ -1,0 +1,128 @@
+'forge clean' running (wd: /home/torof/Desktop/portfolio/marketplace_f)
+'forge build --build-info' running (wd: /home/torof/Desktop/portfolio/marketplace_f)
+INFO:Detectors:
+MarketplaceCustodial.acceptOffer(uint256,uint256) (src/custodial/MarketplaceCustodial.sol#467-536) uses arbitrary from in transferFrom: sent1 = ERC20(WETH).transferFrom(order.offers[_index].sender,msg.sender,afterFees) (src/custodial/MarketplaceCustodial.sol#516-520)
+MarketplaceCustodial.acceptOffer(uint256,uint256) (src/custodial/MarketplaceCustodial.sol#467-536) uses arbitrary from in transferFrom: sent2 = ERC20(WETH).transferFrom(order.offers[_index].sender,address(this),(offer.offerPrice * marketPlaceFee) / 100) (src/custodial/MarketplaceCustodial.sol#523-527)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#arbitrary-from-in-transferfrom
+INFO:Detectors:
+Reentrancy in MarketplaceCustodial.withdrawEthFees() (src/custodial/MarketplaceCustodial.sol#251-255):
+	External calls:
+	- (sent) = msg.sender.call{value: ethFees}() (src/custodial/MarketplaceCustodial.sol#252)
+	State variables written after the call(s):
+	- ethFees = 0 (src/custodial/MarketplaceCustodial.sol#254)
+	MarketplaceCustodial.ethFees (src/custodial/MarketplaceCustodial.sol#33) can be used in cross function reentrancies:
+	- MarketplaceCustodial.getEthFees() (src/custodial/MarketplaceCustodial.sol#633-635)
+	- MarketplaceCustodial.withdrawEthFees() (src/custodial/MarketplaceCustodial.sol#251-255)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#reentrancy-vulnerabilities
+INFO:Detectors:
+Reentrancy in MarketplaceCustodial.withdrawWETHFees() (src/custodial/MarketplaceCustodial.sol#260-268):
+	External calls:
+	- sent = ERC20(WETH).transferFrom(address(this),msg.sender,wethFees) (src/custodial/MarketplaceCustodial.sol#261-265)
+	State variables written after the call(s):
+	- wethFees = 0 (src/custodial/MarketplaceCustodial.sol#267)
+	MarketplaceCustodial.wethFees (src/custodial/MarketplaceCustodial.sol#34) can be used in cross function reentrancies:
+	- MarketplaceCustodial.getWEthFees() (src/custodial/MarketplaceCustodial.sol#640-642)
+	- MarketplaceCustodial.withdrawWETHFees() (src/custodial/MarketplaceCustodial.sol#260-268)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#reentrancy-vulnerabilities-1
+INFO:Detectors:
+MarketplaceCustodial.createOffer(uint256,uint256,uint256).temp (src/custodial/MarketplaceCustodial.sol#451) is a local variable never initialized
+MarketplaceCustodial.createSale(address,uint256,uint256).standard (src/custodial/MarketplaceCustodial.sol#287) is a local variable never initialized
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#uninitialized-local-variables
+INFO:Detectors:
+MarketplaceCustodial.setFees(uint256) (src/custodial/MarketplaceCustodial.sol#243-246) should emit an event for: 
+	- marketPlaceFee = _fees (src/custodial/MarketplaceCustodial.sol#245) 
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#missing-events-arithmetic
+INFO:Detectors:
+Reentrancy in MarketplaceCustodial.acceptOffer(uint256,uint256) (src/custodial/MarketplaceCustodial.sol#467-536):
+	External calls:
+	- ERC721(order.contractAddress).safeTransferFrom(address(this),order.buyer,order.tokenId) (src/custodial/MarketplaceCustodial.sol#496-500)
+	- ERC1155(order.contractAddress).safeTransferFrom(address(this),msg.sender,order.tokenId,1,) (src/custodial/MarketplaceCustodial.sol#502-508)
+	State variables written after the call(s):
+	- wethFees += (offer.offerPrice * marketPlaceFee) / 100 (src/custodial/MarketplaceCustodial.sol#514)
+Reentrancy in MarketplaceCustodial.createSale(address,uint256,uint256) (src/custodial/MarketplaceCustodial.sol#281-322):
+	External calls:
+	- collection.safeTransferFrom(msg.sender,address(this),_tokenId) (src/custodial/MarketplaceCustodial.sol#298)
+	- collection_scope_0.safeTransferFrom(msg.sender,address(this),_tokenId,1,) (src/custodial/MarketplaceCustodial.sol#310-316)
+	State variables written after the call(s):
+	- _createSale(_contractAddress,msg.sender,_tokenId,_price,standard) (src/custodial/MarketplaceCustodial.sol#321)
+		- order.contractAddress = _contractAddress (src/custodial/MarketplaceCustodial.sol#573)
+		- order.seller = _seller (src/custodial/MarketplaceCustodial.sol#574)
+		- order.price = _price (src/custodial/MarketplaceCustodial.sol#575)
+		- order.tokenId = _tokenId (src/custodial/MarketplaceCustodial.sol#576)
+		- order.standard = _standard (src/custodial/MarketplaceCustodial.sol#577)
+	- _createSale(_contractAddress,msg.sender,_tokenId,_price,standard) (src/custodial/MarketplaceCustodial.sol#321)
+		- marketOffersNonce ++ (src/custodial/MarketplaceCustodial.sol#587)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#reentrancy-vulnerabilities-2
+INFO:Detectors:
+MarketplaceCustodial.acceptOffer(uint256,uint256) (src/custodial/MarketplaceCustodial.sol#467-536) uses timestamp for comparisons
+	Dangerous comparisons:
+	- require(bool,string)(block.timestamp < offer.offerTime + offer.duration,offer expired) (src/custodial/MarketplaceCustodial.sol#477-480)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#block-timestamp
+INFO:Detectors:
+ERC721._checkOnERC721Received(address,address,uint256,bytes) (src/testing/NonIERC165/NonStandarNFT.sol#385-407) uses assembly
+	- INLINE ASM (src/testing/NonIERC165/NonStandarNFT.sol#399-401)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#assembly-usage
+INFO:Detectors:
+ERC721._burn(uint256) (src/testing/NonIERC165/NonStandarNFT.sol#294-308) is never used and should be removed
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#dead-code
+INFO:Detectors:
+Pragma version^0.8.13 (script/Counter.s.sol#2) allows old versions
+Pragma version^0.8.19 (src/custodial/MarketplaceCustodial.sol#16) necessitates a version too recent to be trusted. Consider deploying with 0.8.18.
+Pragma version^0.8.19 (src/custodial/Security.sol#3) necessitates a version too recent to be trusted. Consider deploying with 0.8.18.
+Pragma version^0.8.19 (src/non-custodial/MarketPlaceNonCustodial.sol#3) necessitates a version too recent to be trusted. Consider deploying with 0.8.18.
+Pragma version^0.8.6 (src/testing/NFT1155.sol#3) allows old versions
+Pragma version^0.8.6 (src/testing/NFT721.sol#3) allows old versions
+Pragma version^0.8.0 (src/testing/NonIERC165/NonIERC165IERC721.sol#4) allows old versions
+Pragma version^0.8.0 (src/testing/NonIERC165/NonStandarNFT.sol#4) allows old versions
+Pragma version^0.8.6 (src/testing/WETH.sol#3) allows old versions
+solc-0.8.21 is not recommended for deployment
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#incorrect-versions-of-solidity
+INFO:Detectors:
+Low level call in MarketplaceCustodial.withdrawEthFees() (src/custodial/MarketplaceCustodial.sol#251-255):
+	- (sent) = msg.sender.call{value: ethFees}() (src/custodial/MarketplaceCustodial.sol#252)
+Low level call in MarketplaceCustodial.buySale(uint256) (src/custodial/MarketplaceCustodial.sol#373-425):
+	- (sent2) = marketOffers[_marketOfferId].seller.call{value: afterFees}() (src/custodial/MarketplaceCustodial.sol#414-416)
+Low level call in MarketplaceCustodial.withdrawEth() (src/custodial/MarketplaceCustodial.sol#597-602):
+	- (success) = msg.sender.call{value: amount}() (src/custodial/MarketplaceCustodial.sol#600)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#low-level-calls
+INFO:Detectors:
+Parameter MarketplaceCustodial.setFees(uint256)._fees (src/custodial/MarketplaceCustodial.sol#243) is not in mixedCase
+Parameter MarketplaceCustodial.createSale(address,uint256,uint256)._contractAddress (src/custodial/MarketplaceCustodial.sol#282) is not in mixedCase
+Parameter MarketplaceCustodial.createSale(address,uint256,uint256)._tokenId (src/custodial/MarketplaceCustodial.sol#283) is not in mixedCase
+Parameter MarketplaceCustodial.createSale(address,uint256,uint256)._price (src/custodial/MarketplaceCustodial.sol#284) is not in mixedCase
+Parameter MarketplaceCustodial.modifySale(uint256,uint256)._marketOfferId (src/custodial/MarketplaceCustodial.sol#329) is not in mixedCase
+Parameter MarketplaceCustodial.modifySale(uint256,uint256)._newPrice (src/custodial/MarketplaceCustodial.sol#329) is not in mixedCase
+Parameter MarketplaceCustodial.cancelSale(uint256)._marketOfferId (src/custodial/MarketplaceCustodial.sol#339) is not in mixedCase
+Parameter MarketplaceCustodial.buySale(uint256)._marketOfferId (src/custodial/MarketplaceCustodial.sol#373) is not in mixedCase
+Parameter MarketplaceCustodial.createOffer(uint256,uint256,uint256)._marketOfferId (src/custodial/MarketplaceCustodial.sol#440) is not in mixedCase
+Parameter MarketplaceCustodial.createOffer(uint256,uint256,uint256)._amount (src/custodial/MarketplaceCustodial.sol#441) is not in mixedCase
+Parameter MarketplaceCustodial.createOffer(uint256,uint256,uint256)._duration (src/custodial/MarketplaceCustodial.sol#442) is not in mixedCase
+Parameter MarketplaceCustodial.acceptOffer(uint256,uint256)._marketOfferId (src/custodial/MarketplaceCustodial.sol#468) is not in mixedCase
+Parameter MarketplaceCustodial.acceptOffer(uint256,uint256)._index (src/custodial/MarketplaceCustodial.sol#469) is not in mixedCase
+Parameter MarketplaceCustodial.cancelOffer(uint256,uint256)._marketOfferId (src/custodial/MarketplaceCustodial.sol#546) is not in mixedCase
+Parameter MarketplaceCustodial.cancelOffer(uint256,uint256)._index (src/custodial/MarketplaceCustodial.sol#546) is not in mixedCase
+Parameter MarketplaceCustodial.unlockNFT(address,uint256,address)._contract (src/custodial/MarketplaceCustodial.sol#608) is not in mixedCase
+Parameter MarketplaceCustodial.unlockNFT(address,uint256,address)._tokenId (src/custodial/MarketplaceCustodial.sol#609) is not in mixedCase
+Parameter MarketplaceCustodial.unlockNFT(address,uint256,address)._to (src/custodial/MarketplaceCustodial.sol#610) is not in mixedCase
+Parameter MarketplaceCustodial.getSaleOrder(uint256)._marketOfferId (src/custodial/MarketplaceCustodial.sol#625) is not in mixedCase
+Parameter NFT1155.mint(uint256,uint256)._id (src/testing/NFT1155.sol#19) is not in mixedCase
+Parameter NFT1155.mint(uint256,uint256)._amount (src/testing/NFT1155.sol#19) is not in mixedCase
+Parameter NFT1155.mintSword(uint256)._amount (src/testing/NFT1155.sol#23) is not in mixedCase
+Parameter NFT1155.mintShield(uint256)._amount (src/testing/NFT1155.sol#27) is not in mixedCase
+Parameter NFT1155.mintBoots(uint256)._amount (src/testing/NFT1155.sol#31) is not in mixedCase
+Parameter NFT1155.mintHelmet(uint256)._amount (src/testing/NFT1155.sol#35) is not in mixedCase
+Parameter NFT721.mint(uint256)._amount (src/testing/NFT721.sol#16) is not in mixedCase
+Parameter WETH.mint(address,uint256)._to (src/testing/WETH.sol#9) is not in mixedCase
+Parameter WETH.mint(address,uint256)._amount (src/testing/WETH.sol#9) is not in mixedCase
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#conformance-to-solidity-naming-conventions
+INFO:Detectors:
+MarketPlaceNonCustodial.ethFees (src/non-custodial/MarketPlaceNonCustodial.sol#8) is never used in MarketPlaceNonCustodial (src/non-custodial/MarketPlaceNonCustodial.sol#5-97)
+MarketPlaceNonCustodial.wethFees (src/non-custodial/MarketPlaceNonCustodial.sol#9) is never used in MarketPlaceNonCustodial (src/non-custodial/MarketPlaceNonCustodial.sol#5-97)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#unused-state-variable
+INFO:Detectors:
+MarketPlaceNonCustodial.ethFees (src/non-custodial/MarketPlaceNonCustodial.sol#8) should be constant 
+MarketPlaceNonCustodial.marketOffersNonce (src/non-custodial/MarketPlaceNonCustodial.sol#7) should be constant 
+MarketPlaceNonCustodial.marketPlaceFee (src/non-custodial/MarketPlaceNonCustodial.sol#10) should be constant 
+MarketPlaceNonCustodial.wethFees (src/non-custodial/MarketPlaceNonCustodial.sol#9) should be constant 
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#state-variables-that-could-be-declared-constant
+INFO:Slither:. analyzed (51 contracts with 88 detectors), 59 result(s) found
