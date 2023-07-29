@@ -30,8 +30,8 @@ contract MarketplaceCustodial is
     Ownable
 {
     uint256 public marketOffersNonce = 1; /// sale id - all sales ongoing and closed
-    uint256 private ethFees; /// All the fees gathered by the markeplace
-    uint256 private wethFees;
+    uint256 private _ethFees; /// All the fees gathered by the markeplace
+    uint256 private _wethFees;
     uint256 public marketPlaceFee; /// percentage of the fee. starts at 0, cannot be more than 10
     ERC20 public constant WETH = ERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     mapping(uint256 => SaleOrder) public marketOffers;
@@ -43,16 +43,16 @@ contract MarketplaceCustodial is
         address contractAddress; ///address of the NFT contract
         address seller; /// address that created the sale
         address buyer; /// address that bought the sale
-        bytes4 standard; /// standard of the collection - bytes4 of {IERC721} interface OR {IERC1155} interface - only ERC721 and ERC1155 accepted
-        bool closed; ///sale is on or finished
+        bytes4  standard; /// standard of the collection - bytes4 of {IERC721} interface OR {IERC1155} interface - only ERC721 and ERC1155 accepted
+        bool    closed; ///sale is on or finished
         Offer[] offers; /// an array of all the offers
     }
 
     struct Offer {
-        address sender;
-        uint offerPrice;
-        uint duration;
-        uint offerTime;
+        address bidder;
+        uint    offerPrice;
+        uint    duration;
+        uint    offerTime;
     }
 
     error offerClosed();
@@ -241,21 +241,21 @@ contract MarketplaceCustodial is
     /// =============================================
 
     /**
-     *@notice      set the fees. CANNOT be negative or more than 10%
-     *@param _newFees the fee the marketplace will receive from each sale
+     *@notice set the fees. CANNOT be negative or more than 10%
+     *@param  newFees the fee the marketplace will receive from each sale
      */
-    function setFees(uint256 _newFees) external onlyOwner {
-        require(_newFees <= 10, "can't be more than 10%");
-        marketPlaceFee = _newFees;
-        emit FeeModified(_newFees);
+    function setFees(uint256 newFees) external onlyOwner {
+        require(newFees <= 10, "can't be more than 10%");
+        marketPlaceFee = newFees;
+        emit FeeModified(newFees);
     }
 
     /**
      * @notice withdraw all gains in ETH made from the sales fees all at once.
      */
     function withdrawEthFees() external payable onlyOwner {
-        ethFees = 0;
-        (bool sent, ) = msg.sender.call{value: ethFees}("");
+        _ethFees = 0;
+        (bool sent, ) = msg.sender.call{value: _ethFees}("");
         if (!sent) revert failedToSendEther();
     }
 
@@ -263,11 +263,11 @@ contract MarketplaceCustodial is
      * @notice withdraw all gains made in WETH from the sales fees all at once.
      */
     function withdrawWETHFees() external payable onlyOwner {
-        wethFees = 0;
+        _wethFees = 0;
         bool sent = ERC20(WETH).transferFrom(
             address(this),
             msg.sender,
-            wethFees
+            _wethFees
         );
         if (!sent) revert failedToSendEther();
     }
@@ -278,50 +278,50 @@ contract MarketplaceCustodial is
 
     /**
      * @notice                 opens a new sale of a single NFT. Supports {ERC721} and {ERC1155}. Compatible with {ERC721A}
-     * @param _contractAddress the address of the NFT's contract
-     * @param _tokenId         id of the token within its collection
-     * @param _price           price defined by the creator/seller
+     * @param contractAddress the address of the NFT's contract
+     * @param tokenId         id of the token within its collection
+     * @param price           price defined by the creator/seller
      *
      */
     function createSale(
-        address _contractAddress,
-        uint256 _tokenId,
-        uint256 _price
+        address contractAddress,
+        uint256 tokenId,
+        uint256 price
     ) external nonReentrant {
-        require(_price > 0, "price cannot be negative");
+        require(price > 0, "price cannot be negative");
         bytes4 standard;
 
         if (
-            ERC721(_contractAddress).supportsInterface(
+            ERC721(contractAddress).supportsInterface(
                 type(IERC721).interfaceId
             )
         ) {
-            ERC721 collection = ERC721(_contractAddress); ///collection address
+            ERC721 collection = ERC721(contractAddress); ///collection address
 
-            if (collection.ownerOf(_tokenId) != msg.sender) revert notOwner(""); ///creator must own NFT
+            if (collection.ownerOf(tokenId) != msg.sender) revert notOwner(""); ///creator must own NFT
 
             standard = type(IERC721).interfaceId; ///NFT's standard
 
-            _createSale(_contractAddress, msg.sender, _tokenId, _price, standard);
+            _createSale(contractAddress, msg.sender, tokenId, price, standard);
 
-            collection.safeTransferFrom(msg.sender, address(this), _tokenId); ///Transfer NFT to marketplace contract for custody
+            collection.safeTransferFrom(msg.sender, address(this), tokenId); ///Transfer NFT to marketplace contract for custody
 
         } else if (
-            ERC1155(_contractAddress).supportsInterface(
+            ERC1155(contractAddress).supportsInterface(
                 type(IERC1155).interfaceId
             )
         ) {
-            ERC1155 collection = ERC1155(_contractAddress);
-            if (collection.balanceOf(msg.sender, _tokenId) < 1)
+            ERC1155 collection = ERC1155(contractAddress);
+            if (collection.balanceOf(msg.sender, tokenId) < 1)
                 revert notOwner("");
 
                 standard = type(IERC1155).interfaceId; /// NFT's standard
-                _createSale(_contractAddress, msg.sender, _tokenId, _price, standard);
+                _createSale(contractAddress, msg.sender, tokenId, price, standard);
 
             collection.safeTransferFrom(
                 msg.sender,
                 address(this),
-                _tokenId,
+                tokenId,
                 1,
                 ""
             ); /// Transfer NFT to marketplace contract for custody
@@ -394,7 +394,7 @@ contract MarketplaceCustodial is
 
         /// Fees of the marketplace
         uint256 afterFees = msg.value - ((msg.value * marketPlaceFee) / 100);
-        ethFees += ((msg.value * marketPlaceFee) / 100);
+        _ethFees += ((msg.value * marketPlaceFee) / 100);
 
         if (
             ERC721(offer.contractAddress).supportsInterface(
@@ -439,75 +439,76 @@ contract MarketplaceCustodial is
 
     /**
      * @notice make an offer. Offer is made and sent in WETH.
-     * @param _marketOfferId index of the saleOrder
-     * @param _amount price of the offer
-     * @param  _duration duration of the offer
+     * @param  marketOfferId index of the saleOrder
+     * @param  amount price of the offer
+     * @param  duration duration of the offer
      *
      * emits a {OfferSubmitted} event
      */
     function createOffer(
-        uint256 _marketOfferId,
-        uint _amount,
-        uint _duration
+        uint256 marketOfferId,
+        uint256 amount,
+        uint256 duration
     ) external nonReentrant {
-        require(_amount > 0, "amount can't be zero");
-        if (marketOffers[_marketOfferId].closed) revert offerClosed(); ///Only if offer is still ongoing
+        require(amount > 0, "amount can't be zero");
+        if (marketOffers[marketOfferId].closed) revert offerClosed(); ///Only if offer is still ongoing
         require(
-            WETH.allowance(msg.sender, address(this)) >= _amount,
+            WETH.allowance(msg.sender, address(this)) >= amount,
             "not enough balance allowed"
         );
 
-        //TODO: to remove after testing
-        Offer memory temp; ///new offer price
-        temp.sender = msg.sender; ///new caller
-        temp.offerTime = block.timestamp;
-        temp.offerPrice = _amount;
-        temp.duration = _duration;
-        marketOffers[_marketOfferId].offers.push(temp);
-        emit OfferSubmitted(_marketOfferId, msg.sender, _amount);
+        Offer memory tempO = Offer({
+            bidder: msg.sender, 
+            offerTime: block.timestamp, 
+            offerPrice: amount, 
+            duration: duration});
+
+        marketOffers[marketOfferId].offers.push(tempO);
+        emit OfferSubmitted(marketOfferId, msg.sender, amount);
     }
 
 
-    //ALERT: unsafe erc20 safeTransfer and unsafe erc721 && erc1155 transfers
+    //ALERT: unsafe erc20 safeTransfer and unsafe erc721 && erc1155 transfers ?
+    //FIXME: use oracle for time fetching
     /**
-     * @notice               a third party made an offer below the asked price and seller accepts
-     * @dev                  fees SHOULD be automatically substracted
-     * @param _marketOfferId id of the sale
+     * @notice a third party made an offer below the asked price and seller accepts
+     * @dev    fees SHOULD be automatically substracted
+     * @param  marketOfferId id of the sale
      *
      * Emits a {SaleSuccesful} event
      */
     function acceptOffer(
-        uint256 _marketOfferId,
-        uint _index //ALERT: order price and bought at price are different
+        uint256 marketOfferId,
+        uint index //ALERT: order price and bought at price are different
     ) external nonReentrant {
-        SaleOrder storage order = marketOffers[_marketOfferId];
-        Offer memory offer = order.offers[_index];
+        SaleOrder storage order = marketOffers[marketOfferId];
+        Offer memory offer = order.offers[index];
 
         if (order.seller != msg.sender) revert notOwner("caller is not owner");
         require(!order.closed, "sale is closed"); /// owner of the token - sale
-        require(_index < order.offers.length, "index out of bound");
+        require(index < order.offers.length, "index out of bound");
         require(
             block.timestamp < offer.offerTime + offer.duration,
             "offer expired"
         );
         require(
-            WETH.balanceOf(offer.sender) > offer.offerPrice,
+            WETH.balanceOf(offer.bidder) > offer.offerPrice,
             "WETH: not enough balance"
         );
         require(
-            WETH.allowance(offer.sender, address(this)) >=
-                order.offers[_index].offerPrice,
+            WETH.allowance(offer.bidder, address(this)) >=
+                order.offers[index].offerPrice,
             "not enough allowance"
         );
 
-        order.buyer = offer.sender; /// update buyer
+        order.buyer = offer.bidder; /// update buyer
         order.price = offer.offerPrice; /// update sell price
         order.closed = true; /// offer is now over
 
         /// Fees of the marketplace
         uint256 afterFees = offer.offerPrice -
             ((offer.offerPrice * marketPlaceFee) / 100);
-        wethFees += (offer.offerPrice * marketPlaceFee) / 100;
+        _wethFees += (offer.offerPrice * marketPlaceFee) / 100;
 
         if (order.standard == type(IERC721).interfaceId)
             ERC721(order.contractAddress).safeTransferFrom(
@@ -526,21 +527,21 @@ contract MarketplaceCustodial is
         else revert standardNotRecognized();
 
         bool sent1 = ERC20(WETH).transferFrom(
-            order.offers[_index].sender,
+            order.offers[index].bidder,
             msg.sender,
             afterFees
         );
         if (!sent1) revert failedToSendEther();
 
         bool sent2 = ERC20(WETH).transferFrom(
-            order.offers[_index].sender,
+            order.offers[index].bidder,
             address(this),
             (offer.offerPrice * marketPlaceFee) / 100
         );
         if (!sent2) revert failedToSendEther();
 
         emit SaleSuccessful(
-            _marketOfferId,
+            marketOfferId,
             order.seller,
             order.buyer,
             offer.offerPrice
@@ -551,22 +552,22 @@ contract MarketplaceCustodial is
 
     /**
      * @notice               cancel an offer made.
-     * @param _marketOfferId id of the sale
+     * @param marketOfferId id of the sale
      *
      * Emits a {offerCanceled} event
      */
-    function cancelOffer(uint256 _marketOfferId, uint _index) external {
+    function cancelOffer(uint256 marketOfferId, uint index) external {
         require(
-            msg.sender == marketOffers[_marketOfferId].offers[_index].sender,
+            msg.sender == marketOffers[marketOfferId].offers[index].bidder,
             "not the offerer"
         );
 
-        marketOffers[_marketOfferId].offers[_index] = marketOffers[
-            _marketOfferId
-        ].offers[marketOffers[_marketOfferId].offers.length - 1];
-        marketOffers[_marketOfferId].offers.pop();
+        marketOffers[marketOfferId].offers[index] = marketOffers[
+            marketOfferId
+        ].offers[marketOffers[marketOfferId].offers.length - 1];
+        marketOffers[marketOfferId].offers.pop();
 
-        emit OfferCanceled(_marketOfferId, msg.sender, 0);
+        emit OfferCanceled(marketOfferId, msg.sender, 0);
     }
 
     /// ================================
@@ -574,27 +575,27 @@ contract MarketplaceCustodial is
     /// ================================
 
     function _createSale(
-        address _contractAddress,
-        address _seller,
-        uint256 _tokenId,
-        uint256 _price,
-        bytes4 _standard
+        address contractAddress,
+        address seller,
+        uint256 tokenId,
+        uint256 price,
+        bytes4 standard
     ) internal {
         SaleOrder storage order = marketOffers[marketOffersNonce];
 
-        order.contractAddress = _contractAddress; /// collection address
-        order.seller = _seller; /// seller address , cannot be msg.sender since internal
-        order.price = _price; ///sale price
-        order.tokenId = _tokenId;
-        order.standard = _standard; ///NFT's standard
+        order.contractAddress = contractAddress; /// collection address
+        order.seller = seller; /// seller address , cannot be msg.sender since internal
+        order.price = price; ///sale price
+        order.tokenId = tokenId;
+        order.standard = standard; ///NFT's standard
 
         emit SaleCreated(
             marketOffersNonce, ///id of the new offer
-            _seller, ///seller address
-            _tokenId,
-            _contractAddress,
-            _standard,
-            _price
+            seller, ///seller address
+            tokenId,
+            contractAddress,
+            standard,
+            price
         );
         marketOffersNonce++;
     }
@@ -617,12 +618,12 @@ contract MarketplaceCustodial is
      * @notice security function to allow marketplace to send NFT.
      */
     function unlockNFT(
-        address _contract,
-        uint _tokenId,
-        address _to
+        address contract_,
+        uint tokenId,
+        address to
     ) external onlyOwner {
-        require(address(this) == ERC721(_contract).ownerOf(_tokenId), "contract is not owner");
-        ERC721(_contract).safeTransferFrom(address(this), _to, _tokenId);
+        require(address(this) == ERC721(contract_).ownerOf(tokenId), "contract is not owner");
+        ERC721(contract_).safeTransferFrom(address(this), to, tokenId);
     }
 
     /// ================================
@@ -631,26 +632,26 @@ contract MarketplaceCustodial is
 
     /**
      * @notice               get all informations of a sale order by calling its id
-     * @param _marketOfferId id of the sale
+     * @param marketOfferId id of the sale
      */
     function getSaleOrder(
-        uint256 _marketOfferId
+        uint256 marketOfferId
     ) external view returns (SaleOrder memory) {
-        return marketOffers[_marketOfferId];
+        return marketOffers[marketOfferId];
     }
 
     /**
      * @notice get all fees in ETH collected
      */
     function getEthFees() external view onlyOwner returns (uint) {
-        return ethFees;
+        return _ethFees;
     }
 
     /**
      * @notice get all fees in WETH collected
      */
     function getWEthFees() external view onlyOwner returns (uint) {
-        return wethFees;
+        return _wethFees;
     }
 }
 

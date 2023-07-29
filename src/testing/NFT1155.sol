@@ -16,24 +16,9 @@ constructor(uint256 _amount) ERC1155("https://ipfs.io/ipfs/") {
     _mint(msg.sender, 1, _amount, "potions");
 }
 
-function mint(uint _id, uint _amount) external {
-    _mint(msg.sender, _id, _amount, "potions");
+function mint(uint _id, uint _amount, string memory _name) external {
+    _mint(msg.sender, _id, _amount, bytes(_name));
 }
 
-function mintSword(uint _amount) external {
-    _mint(msg.sender, 2, _amount, "sword");
-}
-
-function mintShield(uint _amount) external {
-    _mint(msg.sender, 3, _amount, "shield");
-}
-
-function mintBoots(uint _amount) external {
-    _mint(msg.sender, 4, _amount, "boots");
-}
-
-function mintHelmet(uint _amount) external {
-    _mint(msg.sender, 5, _amount, "helmet");
-}
 
 }
