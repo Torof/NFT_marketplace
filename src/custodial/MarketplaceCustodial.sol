@@ -386,6 +386,24 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         emit OfferSubmitted(marketOfferId, msg.sender, amount);
     }
 
+    function modifyOffer() external {}
+
+    /**
+     * @notice               cancel an offer made.
+     * @param marketOfferId id of the sale
+     *
+     * Emits a {offerCanceled} event
+     */
+    function cancelOffer(uint256 marketOfferId, uint256 index) external {
+        require(msg.sender == marketOffers[marketOfferId].bids[index].bidder, "not the offerer");
+
+        marketOffers[marketOfferId].bids[index] =
+            marketOffers[marketOfferId].bids[marketOffers[marketOfferId].bids.length - 1];
+        marketOffers[marketOfferId].bids.pop();
+
+        emit OfferCanceled(marketOfferId, msg.sender, 0);
+    }
+
     //ALERT: unsafe erc20 safeTransfer and unsafe erc721 && erc1155 transfers ?
     //FIXME: use oracle for time fetching
     /**
@@ -441,24 +459,6 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         if (!sent2) revert failedToSendEther();
 
         emit SaleSuccessful(marketOfferId, order.seller, order.buyer, offer.offerPrice);
-    }
-
-    function modifyOffer() external {}
-
-    /**
-     * @notice               cancel an offer made.
-     * @param marketOfferId id of the sale
-     *
-     * Emits a {offerCanceled} event
-     */
-    function cancelOffer(uint256 marketOfferId, uint256 index) external {
-        require(msg.sender == marketOffers[marketOfferId].bids[index].bidder, "not the offerer");
-
-        marketOffers[marketOfferId].bids[index] =
-            marketOffers[marketOfferId].bids[marketOffers[marketOfferId].bids.length - 1];
-        marketOffers[marketOfferId].bids.pop();
-
-        emit OfferCanceled(marketOfferId, msg.sender, 0);
     }
 
     /// ================================

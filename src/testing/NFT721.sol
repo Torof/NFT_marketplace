@@ -4,17 +4,19 @@ pragma solidity ^0.8.18;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 
-contract NFT721 is ERC721Enumerable{
-    bool revealed;
+contract NFT721 is ERC721Enumerable {
+    bool public revealed;
 
-    constructor() ERC721("721test","721"){
-    _safeMint(msg.sender, totalSupply());
-    _safeMint(msg.sender, totalSupply());
-    _safeMint(msg.sender, totalSupply());
+    constructor() ERC721("721test", "721") {
+        _safeMint(msg.sender, totalSupply());
+        _safeMint(msg.sender, totalSupply());
+        _safeMint(msg.sender, totalSupply());
     }
 
-    function mint(uint amount) external {
-        for(uint i = 0; i < amount; i++) _safeMint(msg.sender, totalSupply());
+    function mint(uint256 amount) external {
+        for (uint256 i = 0; i < amount; i++) {
+            _safeMint(msg.sender, totalSupply());
+        }
     }
 
     function reveal() external {
@@ -29,7 +31,7 @@ contract NFT721 is ERC721Enumerable{
 
         string memory tier;
 
-        if(revealed) tier = "test_metadata.json";
+        if (revealed) tier = "test_metadata.json";
         else tier = "unrevealed.json";
 
         string memory baseURI = _baseURI();

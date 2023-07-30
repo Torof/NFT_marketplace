@@ -3,18 +3,21 @@
 pragma solidity ^0.8.18;
 
 contract MarketPlaceNonCustodial {
+    uint256 public marketOffersNonce = 1;
 
-    uint256 public marketOffersNonce = 1; /// sale id - all sales ongoing and closed
-    uint256 private ethFees; /// All the fees gathered by the markeplace
-    uint256 private wethFees;
-    uint256 public marketPlaceFee; /// percentage of the fee. starts at 0, cannot be more than 10
+    /// sale id - all sales ongoing and closed
+    uint256 private _ethFees;
+    /// All the fees gathered by the markeplace
+    uint256 private _wethFees;
+    uint256 public marketPlaceFee;
+    /// percentage of the fee. starts at 0, cannot be more than 10
     //ERC20 public constant WETH = ERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     mapping(uint256 => Order) public marketOrders;
     mapping(address => uint256) public balanceOfEth;
 
     struct Order {
-        uint salePrice;
-        uint tokenId;
+        uint256 salePrice;
+        uint256 tokenId;
         address contractAddress;
         address seller;
         address buyer;
@@ -24,12 +27,11 @@ contract MarketPlaceNonCustodial {
     }
 
     struct Bid {
-        uint offerPrice;
-        uint duration;
-        uint offerTime;
+        uint256 offerPrice;
+        uint256 duration;
+        uint256 offerTime;
         address sender;
     }
-
 
     function setFees() external {}
 
@@ -55,7 +57,7 @@ contract MarketPlaceNonCustodial {
 
     function cancelOffer() external {}
 
-    function getSaleOrder() public view returns (bool){}
+    function getSaleOrder() public view returns (bool) {}
 
     // function _hasExistingSale(
     //     address _contractAddress,
@@ -94,5 +96,4 @@ contract MarketPlaceNonCustodial {
     //         else return false;
     //     } else return false;
     // }
-
 }
