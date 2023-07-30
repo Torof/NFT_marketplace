@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.18;
 
 contract MarketPlaceNonCustodial {
 
@@ -20,10 +20,10 @@ contract MarketPlaceNonCustodial {
         address buyer;
         bytes4 standard;
         bool closed;
-        Offer[] offers;
+        Bid[] bids;
     }
 
-    struct Offer {
+    struct Bid {
         uint offerPrice;
         uint duration;
         uint offerTime;
@@ -37,7 +37,9 @@ contract MarketPlaceNonCustodial {
 
     function withdrawWethFees() external {}
 
-    function createSale() external {}
+    function createSale() external {
+        marketOffersNonce++;
+    }
 
     function buySale() external {}
 

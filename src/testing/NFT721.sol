@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.6;
+pragma solidity ^0.8.18;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 
@@ -13,8 +13,8 @@ contract NFT721 is ERC721Enumerable{
     _safeMint(msg.sender, totalSupply());
     }
 
-    function mint(uint _amount) external {
-        for(uint i = 0; i < _amount; i++) _safeMint(msg.sender, totalSupply());
+    function mint(uint amount) external {
+        for(uint i = 0; i < amount; i++) _safeMint(msg.sender, totalSupply());
     }
 
     function reveal() external {
