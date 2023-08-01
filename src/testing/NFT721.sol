@@ -11,6 +11,7 @@ contract NFT721 is ERC721Enumerable {
         _safeMint(msg.sender, totalSupply());
         _safeMint(msg.sender, totalSupply());
         _safeMint(msg.sender, totalSupply());
+        _safeMint(msg.sender, totalSupply());
     }
 
     function mint(uint256 amount) external {

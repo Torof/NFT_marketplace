@@ -67,6 +67,8 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
 
     error notEnoughBalance();
 
+    error notApproved();
+
     error standardNotRecognized();
 
     /**
@@ -234,7 +236,8 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
      *
      */
     function createSale(address contractAddress, uint256 tokenId, uint256 price) external nonReentrant {
-        require(price > 0, "price cannot be negative");
+        require(price > 0, "price must be > 0");
+        //BUG: verify creator has approved marketplace for transfer from NFT contract
         bytes4 standard;
 
         if (ERC721(contractAddress).supportsInterface(type(IERC721).interfaceId)) {
@@ -242,6 +245,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
             ///collection address
 
             if (collection.ownerOf(tokenId) != msg.sender) revert notOwner();
+            if (!collection.isApprovedForAll(msg.sender, address(this))) revert notApproved();
 
             ///creator must own NFT
 
@@ -259,6 +263,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
             if (collection.balanceOf(msg.sender, tokenId) < 1) {
                 revert notOwner();
             }
+            if (!collection.isApprovedForAll(msg.sender, address(this))) revert notApproved();
 
             standard = type(IERC1155).interfaceId;
 
@@ -320,16 +325,17 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
      * emits a {SaleSuccesful} event
      */
     function buySale(uint256 marketOfferId) external payable nonReentrant {
-        require(msg.value == marketOffers[marketOfferId].price, "not the right amount");
-        /// give the exact amount to buy
-
+        //Offer must be ongoing
         if (marketOffers[marketOfferId].closed) revert offerClosed();
 
-        marketOffers[marketOfferId].buyer = msg.sender;
+        /// give the exact amount to buy
+        require(msg.value == marketOffers[marketOfferId].price, "not the right amount");
 
         /// update buyer
+        marketOffers[marketOfferId].buyer = msg.sender;
+
+        /// close offer
         marketOffers[marketOfferId].closed = true;
-        /// sale is closed
 
         SaleOrder memory offer = marketOffers[marketOfferId];
 
@@ -337,24 +343,21 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         uint256 afterFees = msg.value - ((msg.value * marketPlaceFee) / 100);
         _ethFees += ((msg.value * marketPlaceFee) / 100);
 
+        /// check if NFT is a erc721 standard NFT
         if (ERC721(offer.contractAddress).supportsInterface(type(IERC721).interfaceId)) {
-            /// check if NFT is a erc721 standard NFT
-
+            /// transfer NFT ERC721 to new owner
             ERC721(offer.contractAddress).safeTransferFrom(address(this), msg.sender, offer.tokenId);
         }
-        /// transfer NFT ERC721 to new owner
+        /// check if NFT is a erc1155 standard NFT
         else if (ERC1155(offer.contractAddress).supportsInterface(type(IERC1155).interfaceId)) {
-            /// check if NFT is a erc1155 standard NFT
-
+            /// transfer NFT ERC1155 to new owner
             ERC1155(offer.contractAddress).safeTransferFrom(address(this), msg.sender, offer.tokenId, 1, "");
-        }
-        /// transfer NFT ERC1155 to new owner
-        else {
+        } else {
             revert standardNotRecognized();
         }
 
+        /// send sale price seller
         (bool sent2,) = marketOffers[marketOfferId].seller.call{value: afterFees}("");
-        /// send sale price to previous owner
         if (!sent2) revert failedToSendEther();
 
         emit SaleSuccessful(
@@ -374,10 +377,15 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
      *
      * emits a {OfferSubmitted} event
      */
-    function createOffer(uint256 marketOfferId, uint256 amount, uint256 duration) external nonReentrant {
+    function createBid(uint256 marketOfferId, uint256 amount, uint256 duration) external nonReentrant {
         require(amount > 0, "amount can't be zero");
-        if (marketOffers[marketOfferId].closed) revert offerClosed();
+
         ///Only if offer is still ongoing
+        if (marketOffers[marketOfferId].closed) revert offerClosed();
+
+        if (WETH.balanceOf(msg.sender) < amount) revert notEnoughBalance();
+
+        //WETH allowance from bidder to marketplace
         require(WETH.allowance(msg.sender, address(this)) >= amount, "not enough balance allowed");
 
         Bid memory tempO = Bid({bidder: msg.sender, offerTime: block.timestamp, offerPrice: amount, duration: duration});
@@ -420,9 +428,10 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         SaleOrder storage order = marketOffers[marketOfferId];
         Bid memory offer = marketOffers[marketOfferId].bids[index];
 
+        ///verify caller is owner of the token - sale
         if (order.seller != msg.sender) revert notOwner();
+        //TODO change to custom error
         require(!order.closed, "sale is closed");
-        /// owner of the token - sale
         require(index < order.bids.length, "index out of bound");
         require(block.timestamp < offer.offerTime + offer.duration, "offer expired");
         require(WETH.balanceOf(offer.bidder) > offer.offerPrice, "WETH: not enough balance");
@@ -501,7 +510,8 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
     /**
      * @notice allow a user to withdraw its balance if ETH was sent
      */
-    function withdrawEth() external {
+    function withdrawEthForUser() external {
+        //TODO: require
         uint256 amount = balanceOfEth[msg.sender];
         delete balanceOfEth[msg.sender];
         (bool success,) = msg.sender.call{value: amount}("");
