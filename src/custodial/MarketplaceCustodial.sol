@@ -99,12 +99,12 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
     /**
      * @notice Emitted when a new offer is made
      */
-    event OfferSubmitted(uint256 marketOfferId, address offerer, uint256 offerPrice);
+    event BidSubmitted(uint256 marketOfferId, address offerer, uint256 offerPrice);
 
     /**
      * @notice Emitted when a bidder cancel its offer
      */
-    event OfferCanceled(uint256 marketOfferId, address offererAddress, uint256 canceledOffer);
+    event BidCanceled(uint256 marketOfferId, address offererAddress, uint256 canceledOffer);
 
     event FeesModified(uint256 newFees);
 
@@ -328,6 +328,8 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         //Offer must be ongoing
         if (marketOffers[marketOfferId].closed) revert offerClosed();
 
+        if ((msg.sender).balance < marketOffers[marketOfferId].price) revert notEnoughBalance();
+
         /// give the exact amount to buy
         require(msg.value == marketOffers[marketOfferId].price, "not the right amount");
 
@@ -391,10 +393,10 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         Bid memory tempO = Bid({bidder: msg.sender, offerTime: block.timestamp, offerPrice: amount, duration: duration});
 
         marketOffers[marketOfferId].bids.push(tempO);
-        emit OfferSubmitted(marketOfferId, msg.sender, amount);
+        emit BidSubmitted(marketOfferId, msg.sender, amount);
     }
 
-    function modifyOffer() external {}
+    function modifyBid() external {}
 
     /**
      * @notice               cancel an offer made.
@@ -402,14 +404,16 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
      *
      * Emits a {offerCanceled} event
      */
-    function cancelOffer(uint256 marketOfferId, uint256 index) external {
-        require(msg.sender == marketOffers[marketOfferId].bids[index].bidder, "not the offerer");
+    function cancelBid(uint256 marketOfferId, uint256 index) external {
+        require(marketOffers[marketOfferId].bids.length != 0, "no bids");
+        require(marketOffers[marketOfferId].bids.length - 1 >= index, "index out of bounds");
+        if (msg.sender != marketOffers[marketOfferId].bids[index].bidder) revert notOwner();
 
         marketOffers[marketOfferId].bids[index] =
             marketOffers[marketOfferId].bids[marketOffers[marketOfferId].bids.length - 1];
         marketOffers[marketOfferId].bids.pop();
 
-        emit OfferCanceled(marketOfferId, msg.sender, 0);
+        emit BidCanceled(marketOfferId, msg.sender, 0);
     }
 
     //ALERT: unsafe erc20 safeTransfer and unsafe erc721 && erc1155 transfers ?
@@ -421,18 +425,19 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
      *
      * Emits a {SaleSuccesful} event
      */
-    function acceptOffer(
+    function acceptBid(
         uint256 marketOfferId,
         uint256 index //ALERT: order price and bought at price are different
     ) external nonReentrant {
         SaleOrder storage order = marketOffers[marketOfferId];
+        require(index < order.bids.length, "index out of bound");
         Bid memory offer = marketOffers[marketOfferId].bids[index];
 
         ///verify caller is owner of the token - sale
         if (order.seller != msg.sender) revert notOwner();
-        //TODO change to custom error
-        require(!order.closed, "sale is closed");
-        require(index < order.bids.length, "index out of bound");
+        if (order.closed) revert offerClosed();
+
+        //TODO: change to custom error
         require(block.timestamp < offer.offerTime + offer.duration, "offer expired");
         require(WETH.balanceOf(offer.bidder) > offer.offerPrice, "WETH: not enough balance");
         require(WETH.allowance(offer.bidder, address(this)) >= order.bids[index].offerPrice, "not enough allowance");

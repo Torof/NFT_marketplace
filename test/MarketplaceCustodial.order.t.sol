@@ -1,6 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.18;
 
+//TODO: test events
+//TODO: test potential security issues
+//TODO: test scenarii
+
+/**
+ * @notice the 'ether' modifier is used to signify units. Some functions use the 'ether' modifier while the currency is in WETH.
+ */
+
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import "../src/testing/WETH.sol";
@@ -18,6 +26,7 @@ contract MarketPlaceCustodialOrder is Test {
     address public seller = vm.addr(1);
     address public alice = vm.addr(2);
     address public tom = vm.addr(3);
+    address public empty = vm.addr(4);
 
     function setUp() public {
         //Create WETH for testing
@@ -44,6 +53,28 @@ contract MarketPlaceCustodialOrder is Test {
         //Seller approves marketplace to transfer NFT on its behalf
         vm.prank(seller);
         _nft721.setApprovalForAll(address(_mkpc), true);
+    }
+
+    //Helper function
+    function createASaleOrder() public {
+        vm.prank(seller);
+        //Create sale
+        _mkpc.createSale(address(_nft721), 1, 2 ether);
+
+        //Verify that seller is registered
+        address seller_ = _mkpc.getSaleOrder(1).seller;
+        assertEq(seller, seller_);
+    }
+
+    //Helper function
+    function createBid() public {
+        createASaleOrder();
+        vm.startPrank(alice);
+        //approve for  eth allowance
+        _weth.approve(address(_mkpc), 2 ether);
+        //Create a bid for 1.5 eth
+        _mkpc.createBid(1, 1 ether + (1 ether * 5 / 10), 1 weeks);
+        vm.stopPrank();
     }
 
     //Direct transfer from safeTransferFrom() disabled
@@ -160,6 +191,18 @@ contract MarketPlaceCustodialOrder is Test {
         assertEq(buyer_, address(0));
     }
 
+    function test_Revert_BuySale_If_Balance_Not_Enough() public {
+        vm.prank(seller);
+        //Create a sale
+        _mkpc.createSale(address(_nft721), 1, 2 ether);
+
+        hoax(empty, 1 ether);
+        //reverts because there isn't enough ether to cover the price
+        bytes4 selector = bytes4(keccak256("notEnoughBalance()"));
+        vm.expectRevert(selector);
+        _mkpc.buySale{value: 1 ether}(1);
+    }
+
     function test_Revert_BuySale_If_Price_Not_Right() public {
         vm.prank(seller);
         //Create a sale
@@ -222,7 +265,7 @@ contract MarketPlaceCustodialOrder is Test {
         assertEq(isClosed, true);
     }
 
-    function test_Revert_CreateBid_If_Not_GT_0() public {
+    function test_Revert_CreateBid_If_Offer_Not_GT_0() public {
         vm.prank(seller);
         //Create a sale
         _mkpc.createSale(address(_nft721), 1, 2 ether);
@@ -269,6 +312,7 @@ contract MarketPlaceCustodialOrder is Test {
         //Create a bid, should revert user doesn't have enough funds
         bytes4 selector = bytes4(keccak256("notEnoughBalance()"));
         vm.expectRevert(selector);
+        //The ether modifier is for units, the price is actually in WETH
         _mkpc.createBid(1, 6 ether, 1 weeks);
 
         //check bids list is empty
@@ -310,19 +354,122 @@ contract MarketPlaceCustodialOrder is Test {
         //check bids list has one bid
         uint256 length = _mkpc.getSaleOrder(1).bids.length;
         assertEq(length, 1);
+        //Check bid's information is correct
         MarketplaceCustodial.Bid memory firstBid = _mkpc.getSaleOrder(1).bids[0];
         assertEq(firstBid.bidder, alice);
-        aserteq(firstBid.offerPrice, 1 ether + (1 ether * 5 / 10));
+        assertEq(firstBid.offerPrice, 1 ether + (1 ether * 5 / 10));
         assertEq(firstBid.duration, 1 weeks);
     }
 
-    function test_ModifyOffer() public {}
+    function test_ModifyBid() public {}
 
-    function test_CancelOffer() public {}
+    function test_Revert_CancelBid_If_caller_Is_Not_Bidder() public {
+        vm.prank(seller);
+        //Create a sale
+        _mkpc.createSale(address(_nft721), 1, 2 ether);
+
+        vm.startPrank(alice);
+        //approve for  eth allowance
+        _weth.approve(address(_mkpc), 2 ether);
+        //Create a bid for 1.5 eth
+        _mkpc.createBid(1, 1 ether + (1 ether * 5 / 10), 1 weeks);
+        vm.stopPrank();
+        vm.prank(tom);
+        bytes4 selector = bytes4(keccak256("notOwner()"));
+        vm.expectRevert(selector);
+        _mkpc.cancelBid(1, 0);
+    }
+
+    function test_Revert_CancelBid_Index_Out_Of_Bounds() public {
+        vm.prank(seller);
+        //Create a sale
+        _mkpc.createSale(address(_nft721), 1, 2 ether);
+
+        vm.startPrank(alice);
+        //approve for  WETH allowance
+        _weth.approve(address(_mkpc), 5 ether);
+        //Create a bid for 1.5 eth
+        _mkpc.createBid(1, 1 ether + (1 ether * 5 / 10), 1 weeks);
+
+        //wrong index, should revert
+        vm.expectRevert("index out of bounds");
+        _mkpc.cancelBid(1, 3);
+
+        //cancel bid 0
+        _mkpc.cancelBid(1, 0);
+
+        //no bids, should revert
+        vm.expectRevert("no bids");
+        _mkpc.cancelBid(1, 0);
+        vm.stopPrank();
+    }
+
+    function test_CancelOffer() public {
+        vm.prank(seller);
+        //Create a sale
+        _mkpc.createSale(address(_nft721), 1, 2 ether);
+
+        vm.startPrank(alice);
+        //approve for  WETH allowance
+        _weth.approve(address(_mkpc), 5 ether);
+        //Create a bid for 1.5 WETH
+        _mkpc.createBid(1, 1 ether + (1 ether * 5 / 10), 1 weeks);
+
+        //cancel bid 0
+        _mkpc.cancelBid(1, 0);
+
+        vm.stopPrank();
+    }
+
+    function test_Revert_AcceptBid_If_SaleClosed() public {
+        address ownerOf = _nft721.ownerOf(1);
+        assertEq(seller, ownerOf);
+        vm.prank(seller);
+        _mkpc.createSale(address(_nft721), 1, 2 ether);
+
+        vm.startPrank(tom);
+        _weth.approve(address(_mkpc), 10 ether);
+        _mkpc.createBid(1, 1 ether * (5 / 10), 2 weeks);
+
+        vm.startPrank(seller);
+        _mkpc.cancelSale(1);
+        bytes4 selector = bytes4(keccak256("offerClosed()"));
+        vm.expectRevert(selector);
+        _mkpc.acceptBid(1, 0);
+        vm.stopPrank();
+    }
+
+    function test_Revert_AcceptBid_Index_Out_Of_Bounds() public {
+        address ownerOf = _nft721.ownerOf(1);
+        assertEq(seller, ownerOf);
+        vm.prank(seller);
+        _mkpc.createSale(address(_nft721), 1, 2 ether);
+
+        vm.startPrank(tom);
+        _weth.approve(address(_mkpc), 10 ether);
+        _mkpc.createBid(1, 1 ether * (5 / 10), 2 weeks);
+
+        vm.startPrank(seller);
+
+        // bytes4 selector = bytes4(keccak256("offerClosed()"));
+        vm.expectRevert("index out of bound");
+        _mkpc.acceptBid(1, 2);
+        vm.stopPrank();
+    }
+
+    function test_Revert_AcceptBid_If_Offer_Is_Expired() public {}
+
+    function test_Revert_AcceptBid_If_Bidder_Not_Enough_Balance() public {}
+
+    function test_Revert_AcceptBid_If_Bidder_Not_Enough_Allowance() public {}
+
+    function test_AcceptBid() public {}
 
     //===========================================//
     //                                           //
     //            Scenarii                       //
     //                                           //
     //===========================================//
+
+    function test_Scenario() public {}
 }

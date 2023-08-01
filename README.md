@@ -1,3 +1,18 @@
+## Marketplace
+
+**This repository contains 2 models of NFT marketplace; One follows a custodial model, and the other a non custodial model**
+
+- **Custodial MarketPlace**
+
+- **Non Custodial Marketplace**
+
+
+## Slither
+
+
+
+
+
 ## Foundry
 
 **Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
