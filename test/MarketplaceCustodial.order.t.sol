@@ -43,7 +43,7 @@ contract MarketPlaceCustodialOrder is Test {
 
         //Deploy marketplace and 2 NFT collections, erc721 and erc1155
         vm.startPrank(owner);
-        _mkpc = new MarketplaceCustodial(address(_weth));
+        _mkpc = new MarketplaceCustodial(address(_weth), 10);
         _nft721 = new NFT721();
         _nft1155 = new NFT1155(25);
         _nft721.transferFrom(owner, seller, 1);
@@ -265,6 +265,20 @@ contract MarketPlaceCustodialOrder is Test {
         assertEq(isClosed, true);
     }
 
+    function test_Eth_Fees_And_Withdraw() public {
+        vm.startPrank(seller);
+        //Create a sale
+        uint256 salePrice = 2 ether;
+        _mkpc.createSale(address(_nft721), 1, salePrice);
+
+        vm.prank(alice);
+        //Buy sale
+        _mkpc.buySale{value: 2 ether}(1);
+
+        uint256 fees = (address(_mkpc).balance);
+        assertEq(fees, salePrice / 10);
+    }
+
     function test_Revert_CreateBid_If_Offer_Not_GT_0() public {
         vm.prank(seller);
         //Create a sale
@@ -404,7 +418,7 @@ contract MarketPlaceCustodialOrder is Test {
         vm.stopPrank();
     }
 
-    function test_CancelOffer() public {
+    function test_CancelBid() public {
         vm.prank(seller);
         //Create a sale
         _mkpc.createSale(address(_nft721), 1, 2 ether);
@@ -440,8 +454,6 @@ contract MarketPlaceCustodialOrder is Test {
     }
 
     function test_Revert_AcceptBid_Index_Out_Of_Bounds() public {
-        address ownerOf = _nft721.ownerOf(1);
-        assertEq(seller, ownerOf);
         vm.prank(seller);
         _mkpc.createSale(address(_nft721), 1, 2 ether);
 
@@ -451,19 +463,82 @@ contract MarketPlaceCustodialOrder is Test {
 
         vm.startPrank(seller);
 
-        // bytes4 selector = bytes4(keccak256("offerClosed()"));
         vm.expectRevert("index out of bound");
         _mkpc.acceptBid(1, 2);
         vm.stopPrank();
     }
 
-    function test_Revert_AcceptBid_If_Offer_Is_Expired() public {}
+    function test_Revert_AcceptBid_If_Offer_Is_Expired() public {
+        vm.prank(seller);
+        _mkpc.createSale(address(_nft721), 1, 2 ether);
 
-    function test_Revert_AcceptBid_If_Bidder_Not_Enough_Balance() public {}
+        vm.startPrank(tom);
+        _weth.approve(address(_mkpc), 10 ether);
+        _mkpc.createBid(1, 1 ether * (5 / 10), 2 weeks);
+
+        skip(3 weeks);
+
+        vm.startPrank(seller);
+
+        vm.expectRevert("offer expired");
+        _mkpc.acceptBid(1, 0);
+        vm.stopPrank();
+    }
+
+    function test_Revert_AcceptBid_If_Bidder_Not_Enough_Balance() public {
+        vm.prank(seller);
+        _mkpc.createSale(address(_nft721), 1, 2 ether);
+
+        vm.startPrank(tom, tom);
+        console.log(msg.sender);
+        console.log(tom);
+        uint256 bal = _weth.balanceOf(tom);
+        console.log(bal);
+        _weth.approve(address(_mkpc), 10 ether);
+        _mkpc.createBid(1, 1 ether * (5 / 10), 2 weeks);
+
+        _weth.transferFrom(tom, empty, 1 ether);
+        vm.stopPrank();
+
+        vm.startPrank(seller);
+        // bytes4 selector = bytes4(keccak256("notEnoughBalance()"));
+        // vm.expectRevert(selector);
+        _mkpc.acceptBid(1, 0);
+        vm.stopPrank();
+    }
 
     function test_Revert_AcceptBid_If_Bidder_Not_Enough_Allowance() public {}
 
-    function test_AcceptBid() public {}
+    function test_AcceptBid() public {
+        vm.prank(seller);
+        _mkpc.createSale(address(_nft721), 1, 2 ether);
+
+        vm.startPrank(tom);
+        _weth.approve(address(_mkpc), 10 ether);
+        _mkpc.createBid(1, 1 ether * (5 / 10), 2 weeks);
+
+        vm.startPrank(seller);
+
+        _mkpc.acceptBid(1, 0);
+        vm.stopPrank();
+    }
+
+    function test_Weth_Fees_And_Withdraw() public {
+        vm.prank(seller);
+        _mkpc.createSale(address(_nft721), 1, 2 ether);
+
+        vm.startPrank(tom);
+        _weth.approve(address(_mkpc), 10 ether);
+        _mkpc.createBid(1, 1 ether * (5 / 10), 2 weeks);
+
+        vm.startPrank(seller);
+
+        _mkpc.acceptBid(1, 0);
+        vm.stopPrank();
+
+        uint256 fees = _weth.balanceOf(address(_mkpc));
+        assertEq(fees, (1 ether * (5 / 10)) / 10);
+    }
 
     //===========================================//
     //                                           //

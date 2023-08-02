@@ -108,8 +108,9 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
 
     event FeesModified(uint256 newFees);
 
-    constructor(address _WETH) {
+    constructor(address _WETH, uint256 _fees) {
         WETH = ERC20(_WETH);
+        marketPlaceFee = _fees;
     }
 
     /// ==========================================
@@ -119,6 +120,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
     receive() external payable {
         ///TODO: verify sender is not contract, if not revert
         ///CHECK: change to WETH ?
+        ///CHECK: add an error vault ?
         balanceOfEth[msg.sender] = msg.value;
     }
 
