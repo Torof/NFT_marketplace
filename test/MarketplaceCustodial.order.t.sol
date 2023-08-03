@@ -88,8 +88,9 @@ contract MarketPlaceCustodialOrder is Test {
     //Revert if caller is not owner of NFT
     function test_Revert_CreateSale_if_NotOwner() public {
         vm.startPrank(buyer);
-        bytes4 selector = bytes4(keccak256("notOwner()"));
-        vm.expectRevert(selector);
+        bytes4 selector = bytes4(keccak256("notOwner(string)"));
+
+        vm.expectRevert(abi.encodeWithSelector(selector, "ERC721"));
         _mkpc.createSale(address(_nft721), 3, 2 ether);
         vm.stopPrank();
     }
@@ -132,8 +133,8 @@ contract MarketPlaceCustodialOrder is Test {
         vm.prank(seller);
         _mkpc.createSale(address(_nft721), 1, 2 ether);
         vm.prank(buyer);
-        bytes4 selector = bytes4(keccak256("notOwner()"));
-        vm.expectRevert(selector);
+        bytes4 selector = bytes4(keccak256("notOwner(string)"));
+        vm.expectRevert(abi.encodeWithSelector(selector, "Sale"));
         _mkpc.modifySale(1, 5 ether);
     }
 
@@ -152,8 +153,8 @@ contract MarketPlaceCustodialOrder is Test {
         vm.prank(seller);
         _mkpc.createSale(address(_nft721), 1, 2 ether);
         vm.prank(buyer);
-        bytes4 selector = bytes4(keccak256("notOwner()"));
-        vm.expectRevert(selector);
+        bytes4 selector = bytes4(keccak256("notOwner(string)"));
+        vm.expectRevert(abi.encodeWithSelector(selector, "Sale"));
         _mkpc.cancelSale(1);
     }
 
@@ -389,8 +390,8 @@ contract MarketPlaceCustodialOrder is Test {
         _mkpc.createBid(1, 1 ether + (1 ether * 5 / 10), 1 weeks);
         vm.stopPrank();
         vm.prank(bidder);
-        bytes4 selector = bytes4(keccak256("notOwner()"));
-        vm.expectRevert(selector);
+        bytes4 selector = bytes4(keccak256("notOwner(string)"));
+        vm.expectRevert(abi.encodeWithSelector(selector, "Bid"));
         _mkpc.cancelBid(1, 0);
     }
 

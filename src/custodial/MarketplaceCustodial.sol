@@ -35,35 +35,42 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
     mapping(address => uint256) public balanceOfEth;
 
     struct SaleOrder {
-        uint256 price;
         /// price of the sale
+        uint256 price;
+        //Id of the NFT token for sale
         uint256 tokenId;
-        address contractAddress;
         ///address of the NFT contract
-        address seller;
+        address contractAddress;
         /// address that created the sale
-        address buyer;
+        address seller;
         /// address that bought the sale
-        bytes4 standard;
+        address buyer;
         /// standard of the collection - bytes4 of {IERC721} interface OR {IERC1155} interface - only ERC721 and ERC1155 accepted
-        bool closed;
+        bytes4 standard;
         ///sale is on or finished
+        bool closed;
+        ///Array containing all the bids made for a NFT
         Bid[] bids;
     }
-    /// an array of all the bids
 
     struct Bid {
+        ///Address that made the bid
         address bidder;
+        ///Price of the bid
         uint256 offerPrice;
+        ///Maximum duration of the bid
         uint256 duration;
+        ///Time at which the bid was initiated. Used to calculate max duration
         uint256 offerTime;
     }
 
     error offerClosed();
 
-    error failedToSendEther();
+    error failedToSend_Ether();
 
-    error notOwner();
+    error failedToSend_WEther();
+
+    error notOwner(string);
 
     error notEnoughBalance();
 
@@ -79,8 +86,9 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
     event BatchNFTReceived(
         address _operator, address _from, uint256[] ids, uint256[] values, string standard, bytes data
     );
+
     /**
-     * @notice Emitted when a new market saleis created
+     * @notice Emitted when a new market sale is created
      */
     event SaleCreated(
         uint256 offerId, address from, uint256 tokenId, address contractAddress, bytes4 standard, uint256 price
@@ -106,6 +114,9 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
      */
     event BidCanceled(uint256 marketOfferId, address offererAddress, uint256 canceledOffer);
 
+    /**
+     * @notice Emitted when the markeplace fees are modified
+     */
     event FeesModified(uint256 newFees);
 
     constructor(address _WETH, uint256 _fees) {
@@ -214,7 +225,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
     function withdrawEthFees() external payable onlyOwner {
         _ethFees = 0;
         (bool sent,) = msg.sender.call{value: _ethFees}("");
-        if (!sent) revert failedToSendEther();
+        if (!sent) revert failedToSend_Ether();
     }
 
     /**
@@ -223,7 +234,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
     function withdrawWETHFees() external payable onlyOwner {
         _wethFees = 0;
         bool sent = ERC20(WETH).transferFrom(address(this), msg.sender, _wethFees);
-        if (!sent) revert failedToSendEther();
+        if (!sent) revert failedToSend_WEther();
     }
 
     /// ==========================================
@@ -242,38 +253,41 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         //BUG: verify creator has approved marketplace for transfer from NFT contract
         bytes4 standard;
 
+        ///assign collection address - ERC721
         if (ERC721(contractAddress).supportsInterface(type(IERC721).interfaceId)) {
             ERC721 collection = ERC721(contractAddress);
-            ///collection address
-
-            if (collection.ownerOf(tokenId) != msg.sender) revert notOwner();
-            if (!collection.isApprovedForAll(msg.sender, address(this))) revert notApproved();
 
             ///creator must own NFT
+            if (collection.ownerOf(tokenId) != msg.sender) revert notOwner("ERC721");
 
-            standard = type(IERC721).interfaceId;
-
-            ///NFT's standard
-
-            _createSale(contractAddress, msg.sender, tokenId, price, standard);
-
-            collection.safeTransferFrom(msg.sender, address(this), tokenId);
-
-            ///Transfer NFT to marketplace contract for custody
-        } else if (ERC1155(contractAddress).supportsInterface(type(IERC1155).interfaceId)) {
-            ERC1155 collection = ERC1155(contractAddress);
-            if (collection.balanceOf(msg.sender, tokenId) < 1) {
-                revert notOwner();
-            }
+            ///Verify caller has approved marketplace for all NFTs of one contract - ERC721
             if (!collection.isApprovedForAll(msg.sender, address(this))) revert notApproved();
 
-            standard = type(IERC1155).interfaceId;
+            ///NFT's standard - ERC721
+            standard = type(IERC721).interfaceId;
 
-            /// NFT's standard
             _createSale(contractAddress, msg.sender, tokenId, price, standard);
 
+            ///Transfer NFT to marketplace contract for custody - ERC721
+            collection.safeTransferFrom(msg.sender, address(this), tokenId);
+        }
+        ///assign colection address - ERC1155
+        else if (ERC1155(contractAddress).supportsInterface(type(IERC1155).interfaceId)) {
+            ERC1155 collection = ERC1155(contractAddress);
+
+            ///Verify caller is token owner
+            if (collection.balanceOf(msg.sender, tokenId) < 1) revert notOwner("ERC1155");
+
+            ///Verify caller has approved marketplace for all NFTs of one contract - ERC1155
+            if (!collection.isApprovedForAll(msg.sender, address(this))) revert notApproved();
+
+            /// NFT's standard - ERC1155
+            standard = type(IERC1155).interfaceId;
+
+            _createSale(contractAddress, msg.sender, tokenId, price, standard);
+
+            /// Transfer NFT to marketplace contract for custody - ERC1155
             collection.safeTransferFrom(msg.sender, address(this), tokenId, 1, "");
-            /// Transfer NFT to marketplace contract for custody
         } else {
             revert standardNotRecognized();
         }
@@ -285,9 +299,11 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
      * @param  newPrice the new price of the sale
      */
     function modifySale(uint256 marketOfferId, uint256 newPrice) external {
+        ///Verify caller is seller
         if (msg.sender != marketOffers[marketOfferId].seller) {
-            revert notOwner();
+            revert notOwner("Sale");
         }
+        ///Set new price
         marketOffers[marketOfferId].price = newPrice;
     }
 
@@ -297,20 +313,22 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
      */
     function cancelSale(uint256 marketOfferId) external nonReentrant {
         SaleOrder memory saleOrder = marketOffers[marketOfferId];
-        if (saleOrder.closed) revert offerClosed();
-        /// offer must still be ongoing to cancel
-        if (msg.sender != saleOrder.seller) revert notOwner();
 
-        marketOffers[marketOfferId].closed = true;
+        /// offer must still be ongoing to cancel
+        if (saleOrder.closed) revert offerClosed();
+
+        ///caller must be seller
+        if (msg.sender != saleOrder.seller) revert notOwner("Sale");
 
         /// sale is over
+        marketOffers[marketOfferId].closed = true;
 
         if (saleOrder.standard == type(IERC721).interfaceId) {
+            /// sale is canceled NFt sent back to its owner - ERC721
             ERC721(saleOrder.contractAddress).safeTransferFrom(address(this), msg.sender, saleOrder.tokenId);
-            /// sale is canceled and erc721 NFt sent back to its owner
         } else if (saleOrder.standard == type(IERC1155).interfaceId) {
-            ERC1155(saleOrder.contractAddress).safeTransferFrom(address(this), msg.sender, saleOrder.tokenId, 1, "");
             /// sale is canceled and erc1155 NFT sent back to its owner
+            ERC1155(saleOrder.contractAddress).safeTransferFrom(address(this), msg.sender, saleOrder.tokenId, 1, "");
         } else {
             revert standardNotRecognized();
         }
@@ -330,8 +348,9 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         //Offer must be ongoing
         if (marketOffers[marketOfferId].closed) revert offerClosed();
 
+        ///caller must have balance
         if ((msg.sender).balance < marketOffers[marketOfferId].price) revert notEnoughBalance();
-
+        //ALERT: redundant checks
         /// give the exact amount to buy
         require(msg.value == marketOffers[marketOfferId].price, "not the right amount");
 
@@ -360,9 +379,9 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
             revert standardNotRecognized();
         }
 
-        /// send sale price seller
+        ///buyer sends sale price to seller
         (bool sent2,) = marketOffers[marketOfferId].seller.call{value: afterFees}("");
-        if (!sent2) revert failedToSendEther();
+        if (!sent2) revert failedToSend_Ether();
 
         emit SaleSuccessful(
             marketOfferId, marketOffers[marketOfferId].seller, msg.sender, marketOffers[marketOfferId].price
@@ -387,6 +406,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         ///Only if offer is still ongoing
         if (marketOffers[marketOfferId].closed) revert offerClosed();
 
+        /// caller must have enough WETH balance to create order
         if (WETH.balanceOf(msg.sender) < amount) revert notEnoughBalance();
 
         //WETH allowance from bidder to marketplace
@@ -394,6 +414,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
 
         Bid memory tempO = Bid({bidder: msg.sender, offerTime: block.timestamp, offerPrice: amount, duration: duration});
 
+        ///Submit new bid to order's bid list
         marketOffers[marketOfferId].bids.push(tempO);
         emit BidSubmitted(marketOfferId, msg.sender, amount);
     }
@@ -402,11 +423,12 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
      *
      */
     function modifyBid(uint256 marketOfferId, uint256 bidIndex, uint256 newPrice) external {
-        if (marketOffers[marketOfferId].bids[bidIndex].bidder != msg.sender) revert notOwner();
+        if (marketOffers[marketOfferId].bids[bidIndex].bidder != msg.sender) revert notOwner("Bid");
 
         ///Only if offer is still ongoing
         if (marketOffers[marketOfferId].closed) revert offerClosed();
 
+        ///Set new price of bid
         marketOffers[marketOfferId].bids[bidIndex].offerPrice = newPrice;
     }
 
@@ -417,10 +439,16 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
      * Emits a {offerCanceled} event
      */
     function cancelBid(uint256 marketOfferId, uint256 index) external {
+        ///Revert if no bids for this order
         require(marketOffers[marketOfferId].bids.length != 0, "no bids");
-        require(marketOffers[marketOfferId].bids.length - 1 >= index, "index out of bounds");
-        if (msg.sender != marketOffers[marketOfferId].bids[index].bidder) revert notOwner();
 
+        ///Revert if bid index doesn't exist
+        require(marketOffers[marketOfferId].bids.length - 1 >= index, "index out of bounds");
+
+        ///Only bidder can cancel a bid
+        if (msg.sender != marketOffers[marketOfferId].bids[index].bidder) revert notOwner("Bid");
+
+        ///Delete bid
         marketOffers[marketOfferId].bids[index] =
             marketOffers[marketOfferId].bids[marketOffers[marketOfferId].bids.length - 1];
         marketOffers[marketOfferId].bids.pop();
@@ -446,7 +474,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         Bid memory offer = marketOffers[marketOfferId].bids[index];
 
         ///verify caller is owner of the token - sale
-        if (order.seller != msg.sender) revert notOwner();
+        if (order.seller != msg.sender) revert notOwner("Bid");
         if (order.closed) revert offerClosed();
 
         //TODO: change to custom error
@@ -481,10 +509,10 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         }
 
         bool sent1 = ERC20(WETH).transferFrom(offer.bidder, msg.sender, afterFees);
-        if (!sent1) revert failedToSendEther();
+        if (!sent1) revert failedToSend_WEther();
 
         bool sent2 = ERC20(WETH).transferFrom(offer.bidder, address(this), (offer.offerPrice * marketPlaceFee) / 100);
-        if (!sent2) revert failedToSendEther();
+        if (!sent2) revert failedToSend_WEther();
 
         emit SaleSuccessful(marketOfferId, order.seller, order.buyer, offer.offerPrice);
     }
@@ -550,7 +578,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
     /// ================================
 
     /**
-     * @notice               get all informations of a sale order by calling its id
+     * @notice get all informations of a sale order by calling its id
      * @param marketOfferId id of the sale
      */
     function getSaleOrder(uint256 marketOfferId) external view returns (SaleOrder memory) {
@@ -572,13 +600,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
     }
 }
 
-// Reentrancy: The contract doesn't seem to protect against reentrancy attacks in the buy function. It's important to prevent a malicious user from being able to re-enter the buy function before it has finished executing.
-
 // Integer Overflow/Underflow: There are several places where integer overflow/underflow could occur. For example, in the _createSale function, the marketOffersNonce variable is incremented without checking if it has already reached its maximum value. This could result in an integer overflow. Similarly, in the buy function, the contract should check that the amount sent by the buyer is greater than or equal to the sale price, to avoid integer underflows.
-
-// Lack of Access Controls: The unlockNFT function can be called by anyone, which could be a potential security issue if it's not intended to be publicly accessible.
-
-// Lack of Input Validation: There's no input validation in the _hasBalance function, which could allow a malicious user to pass invalid inputs that could cause unexpected behavior in the function.
 
 // Potential DoS Attack: The getSaleOrder function could be used to consume a large amount of gas, potentially resulting in a DoS attack if an attacker repeatedly calls this function with a large number.
 
@@ -586,7 +608,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
 
 // The onlyOwner modifier is used in some functions, but it is not defined in the contract. It is unclear who the owner is or how it is determined.
 
-// ///ALERT: for now only order of one ERC1155 token by one can be issued, but is several will need to count amounts;
+// ///ALERT: for now only order of one ERC1155 token by one can be issued, but if several => will need to count amounts;
 // function _hasBalance(
 //     address _contractAddres,
 //     uint _tokenId,
