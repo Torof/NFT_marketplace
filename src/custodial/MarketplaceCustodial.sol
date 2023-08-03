@@ -398,10 +398,20 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         emit BidSubmitted(marketOfferId, msg.sender, amount);
     }
 
-    function modifyBid() external {}
+    /**
+     *
+     */
+    function modifyBid(uint256 marketOfferId, uint256 bidIndex, uint256 newPrice) external {
+        if (marketOffers[marketOfferId].bids[bidIndex].bidder != msg.sender) revert notOwner();
+
+        ///Only if offer is still ongoing
+        if (marketOffers[marketOfferId].closed) revert offerClosed();
+
+        marketOffers[marketOfferId].bids[bidIndex].offerPrice = newPrice;
+    }
 
     /**
-     * @notice               cancel an offer made.
+     * @notice cancel an offer made.
      * @param marketOfferId id of the sale
      *
      * Emits a {offerCanceled} event
@@ -442,7 +452,9 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         //TODO: change to custom error
         require(block.timestamp < offer.offerTime + offer.duration, "offer expired");
         require(WETH.balanceOf(offer.bidder) > offer.offerPrice, "WETH: not enough balance");
-        require(WETH.allowance(offer.bidder, address(this)) >= order.bids[index].offerPrice, "not enough allowance");
+        require(
+            WETH.allowance(offer.bidder, address(this)) >= order.bids[index].offerPrice, "Bidder: not enough allowance"
+        );
 
         order.buyer = offer.bidder;
 
