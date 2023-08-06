@@ -100,6 +100,11 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
     event SaleCanceled(uint256 marketOfferId);
 
     /**
+     * @notice Emitted when a seller cancel its sale
+     */
+    event SaleModified(uint256 marketOfferId, uint256 newPrice);
+
+    /**
      * @notice Emitted when a sale is successfully concluded
      */
     event SaleSuccessful(uint256 marketOfferId, address seller, address buyer, uint256 price);
@@ -303,8 +308,12 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         if (msg.sender != marketOffers[marketOfferId].seller) {
             revert notOwner("Sale");
         }
+        /// offer must still be ongoing to cancel
+        if (marketOffers[marketOfferId].closed) revert offerClosed();
         ///Set new price
         marketOffers[marketOfferId].price = newPrice;
+
+        emit SaleModified(marketOfferId, newPrice);
     }
 
     /**
@@ -598,6 +607,14 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
     function getWEthFees() external view onlyOwner returns (uint256) {
         return _wethFees;
     }
+
+    ///==================================
+    ///           HOOKS
+    ///==================================
+
+    function _beforeTokenTransfer() internal {}
+
+    function _afterTokenTransfer() internal {}
 }
 
 // Integer Overflow/Underflow: There are several places where integer overflow/underflow could occur. For example, in the _createSale function, the marketOffersNonce variable is incremented without checking if it has already reached its maximum value. This could result in an integer overflow. Similarly, in the buy function, the contract should check that the amount sent by the buyer is greater than or equal to the sale price, to avoid integer underflows.
