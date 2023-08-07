@@ -66,9 +66,9 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
 
     error offerClosed();
 
-    error failedToSend_Ether();
+    error failedToSend_ETH();
 
-    error failedToSend_WEther();
+    error failedToSend_WETH();
 
     error notOwner(string);
 
@@ -133,15 +133,15 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
     ///    Receive & support interfaces
     /// ==========================================
 
-    receive() external payable {
-        ///TODO: verify sender is not contract, if not revert
-        ///CHECK: change to WETH ?
-        ///CHECK: add an error vault ?
-        balanceOfEth[msg.sender] = msg.value;
-    }
+    // receive() external payable {
+    //     ///TODO: verify sender is not contract, if not revert
+    //     ///CHECK: change to WETH ?
+    //     ///CHECK: add an error vault ?
+    //     if (msg.value > 0) revert("not allowed receive");
+    // }
 
     fallback() external {
-        revert("not allowed");
+        revert("not allowed fallback");
     }
 
     function supportsInterface(bytes4 interfaceId) public pure override returns (bool) {
@@ -203,9 +203,10 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         uint256[] calldata values,
         bytes calldata data
     ) external override returns (bytes4) {
+        //disallow direct transfers
         if (msg.sender != address(this) && tx.origin == operator) {
             revert("direct transfer not allowed");
-        } //disallow direct transfers
+        }
         emit BatchNFTReceived(operator, from, ids, values, "ERC1155", data);
         return IERC1155Receiver.onERC1155BatchReceived.selector;
     }
@@ -214,6 +215,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
     ///       Marketplace functions
     /// =============================================
 
+    ///ALERT: no float points allowed, units should be changed to avoid problems
     /**
      * @notice set the fees. CANNOT be negative or more than 10%
      * @param  newFees the fee the marketplace will receive from each sale
@@ -228,18 +230,20 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
      * @notice withdraw all gains in ETH made from the sales fees all at once.
      */
     function withdrawEthFees() external payable onlyOwner {
+        uint256 fees = _ethFees;
         _ethFees = 0;
-        (bool sent,) = msg.sender.call{value: _ethFees}("");
-        if (!sent) revert failedToSend_Ether();
+        (bool sent,) = msg.sender.call{value: fees}("");
+        if (!sent) revert failedToSend_ETH();
     }
 
     /**
      * @notice withdraw all gains made in WETH from the sales fees all at once.
      */
-    function withdrawWETHFees() external payable onlyOwner {
+    function withdrawWethFees() external payable onlyOwner {
+        uint256 fees = _wethFees;
         _wethFees = 0;
-        bool sent = ERC20(WETH).transferFrom(address(this), msg.sender, _wethFees);
-        if (!sent) revert failedToSend_WEther();
+        bool sent = ERC20(WETH).transferFrom(address(this), msg.sender, fees);
+        if (!sent) revert failedToSend_WETH();
     }
 
     /// ==========================================
@@ -390,7 +394,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
 
         ///buyer sends sale price to seller
         (bool sent2,) = marketOffers[marketOfferId].seller.call{value: afterFees}("");
-        if (!sent2) revert failedToSend_Ether();
+        if (!sent2) revert failedToSend_ETH();
 
         emit SaleSuccessful(
             marketOfferId, marketOffers[marketOfferId].seller, msg.sender, marketOffers[marketOfferId].price
@@ -518,10 +522,10 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         }
 
         bool sent1 = ERC20(WETH).transferFrom(offer.bidder, msg.sender, afterFees);
-        if (!sent1) revert failedToSend_WEther();
+        if (!sent1) revert failedToSend_WETH();
 
         bool sent2 = ERC20(WETH).transferFrom(offer.bidder, address(this), (offer.offerPrice * marketPlaceFee) / 100);
-        if (!sent2) revert failedToSend_WEther();
+        if (!sent2) revert failedToSend_WETH();
 
         emit SaleSuccessful(marketOfferId, order.seller, order.buyer, offer.offerPrice);
     }
@@ -563,22 +567,21 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
     ///         Security fallbacks
     /// ===============================
 
-    /**
-     * @notice allow a user to withdraw its balance if ETH was sent
-     */
-    function withdrawEthForUser() external {
-        //TODO: require
-        uint256 amount = balanceOfEth[msg.sender];
-        delete balanceOfEth[msg.sender];
-        (bool success,) = msg.sender.call{value: amount}("");
-        require(success);
-    }
+    // /**
+    //  * @notice allow a user to withdraw its balance if ETH was sent
+    //  */
+    // function withdrawEthForUser() external {
+    //     //TODO: require balance > 0
+    //     uint256 amount = balanceOfEth[msg.sender];
+    //     delete balanceOfEth[msg.sender];
+    //     (bool success,) = msg.sender.call{value: amount}("");
+    //     require(success);
+    // }
 
     /**
      * @notice security function to allow marketplace to send NFT.
      */
     function unlockNFT(address contract_, uint256 tokenId, address to) external onlyOwner {
-        require(address(this) == ERC721(contract_).ownerOf(tokenId), "contract is not owner");
         ERC721(contract_).safeTransferFrom(address(this), to, tokenId);
     }
 
