@@ -242,7 +242,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
     function withdrawWethFees() external payable onlyOwner {
         uint256 fees = _wethFees;
         _wethFees = 0;
-        bool sent = ERC20(WETH).transferFrom(address(this), msg.sender, fees);
+        bool sent = ERC20(WETH).transfer(msg.sender, fees);
         if (!sent) revert failedToSend_WETH();
     }
 
