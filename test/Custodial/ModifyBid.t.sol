@@ -11,6 +11,7 @@ import "./SetUp.t.sol";
 
 contract ModifyBid is SetUp {
     function testRevert_ModifyBid_Not_Bid_Owner() public {}
+    function test_Revert_ModifyBid_Index_Out_Of_Bounds() public {}
     function testRevert_ModifyBid_Offer_Closed() public {}
     function test_ModifyBid() public {}
     function test_Emit_ModifyBid_BidModified() public {}

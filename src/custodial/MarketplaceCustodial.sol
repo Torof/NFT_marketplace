@@ -110,14 +110,19 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
     event SaleSuccessful(uint256 marketOfferId, address seller, address buyer, uint256 price);
 
     /**
-     * @notice Emitted when a new offer is made
+     * @notice Emitted when a new bid is made
      */
-    event BidSubmitted(uint256 marketOfferId, address offerer, uint256 offerPrice);
+    event BidSubmitted(uint256 marketOfferId, address bidder, uint256 bidPrice);
+
+    /**
+     * @notice Emitted when a bid is modified
+     */
+    event BidModified(uint256 marketOfferId, address bidder, uint256 newPrice);
 
     /**
      * @notice Emitted when a bidder cancel its offer
      */
-    event BidCanceled(uint256 marketOfferId, address offererAddress, uint256 canceledOffer);
+    event BidCanceled(uint256 marketOfferId, address bidder, uint256 canceledBid);
 
     /**
      * @notice Emitted when the markeplace fees are modified
@@ -432,6 +437,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         emit BidSubmitted(marketOfferId, msg.sender, amount);
     }
 
+    //TODO: add duration modif
     /**
      *
      */
@@ -441,8 +447,13 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         ///Only if offer is still ongoing
         if (marketOffers[marketOfferId].closed) revert offerClosed();
 
+        ///Revert if bid index doesn't exist
+        require(marketOffers[marketOfferId].bids.length - 1 >= bidIndex, "index out of bounds");
+
         ///Set new price of bid
         marketOffers[marketOfferId].bids[bidIndex].offerPrice = newPrice;
+
+        emit BidModified(marketOfferId, msg.sender, newPrice);
     }
 
     /**
@@ -451,18 +462,18 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
      *
      * Emits a {offerCanceled} event
      */
-    function cancelBid(uint256 marketOfferId, uint256 index) external {
+    function cancelBid(uint256 marketOfferId, uint256 bidIndex) external {
         ///Revert if no bids for this order
         require(marketOffers[marketOfferId].bids.length != 0, "no bids");
 
         ///Revert if bid index doesn't exist
-        require(marketOffers[marketOfferId].bids.length - 1 >= index, "index out of bounds");
+        require(marketOffers[marketOfferId].bids.length - 1 >= bidIndex, "bidIndex out of bounds");
 
         ///Only bidder can cancel a bid
-        if (msg.sender != marketOffers[marketOfferId].bids[index].bidder) revert notOwner("Bid");
+        if (msg.sender != marketOffers[marketOfferId].bids[bidIndex].bidder) revert notOwner("Bid");
 
         ///Delete bid
-        marketOffers[marketOfferId].bids[index] =
+        marketOffers[marketOfferId].bids[bidIndex] =
             marketOffers[marketOfferId].bids[marketOffers[marketOfferId].bids.length - 1];
         marketOffers[marketOfferId].bids.pop();
 
@@ -607,7 +618,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
     /**
      * @notice get all fees in WETH collected
      */
-    function getWEthFees() external view onlyOwner returns (uint256) {
+    function getWethFees() external view onlyOwner returns (uint256) {
         return _wethFees;
     }
 
@@ -619,33 +630,3 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
 
     function _afterTokenTransfer() internal {}
 }
-
-// Integer Overflow/Underflow: There are several places where integer overflow/underflow could occur. For example, in the _createSale function, the marketOffersNonce variable is incremented without checking if it has already reached its maximum value. This could result in an integer overflow. Similarly, in the buy function, the contract should check that the amount sent by the buyer is greater than or equal to the sale price, to avoid integer underflows.
-
-// Potential DoS Attack: The getSaleOrder function could be used to consume a large amount of gas, potentially resulting in a DoS attack if an attacker repeatedly calls this function with a large number.
-
-// The _createSale function could potentially result in an unintended transfer of ownership of an NFT if the _seller address is not the owner of the NFT being sold. This can happen if the _seller address is not updated after an NFT transfer or if the _seller address is set to an arbitrary address that doesn't actually own the NFT. This can lead to unauthorized sales of NFTs.
-
-// The onlyOwner modifier is used in some functions, but it is not defined in the contract. It is unclear who the owner is or how it is determined.
-
-// ///ALERT: for now only order of one ERC1155 token by one can be issued, but if several => will need to count amounts;
-// function _hasBalance(
-//     address _contractAddres,
-//     uint _tokenId,
-//     address _creator
-// ) internal view returns (bool enough) {
-//     // uint[] memory ex_Orders;
-//     uint j;
-//     for (uint i = 1; i <= marketOffersNonce; ++i) {
-//         if (
-//             marketOffers[i].contractAddress == _contractAddres &&
-//             marketOffers[i].tokenId == _tokenId &&
-//             marketOffers[i].seller == msg.sender
-//         ) {
-//             j++;
-//         }
-//         ERC1155(_contractAddres).balanceOf(_creator, _tokenId) > j
-//             ? enough = true
-//             : enough = false;
-//     }
-// }

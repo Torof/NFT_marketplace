@@ -9,6 +9,7 @@ import "./SetUp.t.sol";
 
 contract CreateSale is SetUp {
     //Revert if caller is not owner of NFT
+
     function test_Revert_CreateSale_if_NotOwner() public {
         vm.startPrank(buyer);
         bytes4 selector = bytes4(keccak256("notOwner(string)"));
@@ -47,6 +48,17 @@ contract CreateSale is SetUp {
         _mkpc.createSale(address(_nft721), 1, 2 ether);
 
         //Verify that seller is registered
+        address seller_ = _mkpc.getSaleOrder(1).seller;
+        assertEq(seller, seller_);
+    }
+
+    //TODO: complete
+    function test_GetSaleOrder() public {
+        vm.prank(seller);
+        //Create sale
+        _mkpc.createSale(address(_nft721), 1, 2 ether);
+
+        //Verify that saleOrder has right info
         address seller_ = _mkpc.getSaleOrder(1).seller;
         assertEq(seller, seller_);
     }

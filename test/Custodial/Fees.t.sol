@@ -9,6 +9,11 @@ pragma solidity 0.8.18;
 import "./SetUp.t.sol";
 
 contract Fees is SetUp {
+    function test_Revert_GetEthFees_Not_Owner() public {
+        vm.expectRevert("Ownable: caller is not the owner");
+        _mkpc.getEthFees();
+    }
+
     function test_Eth_Fees_Distributed() public {
         vm.startPrank(seller);
         //Create a sale
@@ -99,7 +104,47 @@ contract Fees is SetUp {
         assertEq(balanceAfter, balanceBefore + (bidPrice / 10));
     }
 
-    //BUG: ERC20 insufficient allowance
+    function test_Revert_GetWethFees_Not_Owner() public {
+        vm.expectRevert("Ownable: caller is not the owner");
+        _mkpc.getWethFees();
+    }
+
+    function test_GetWethFees() public {
+        vm.prank(seller);
+        //Seller creates a new sale
+        _mkpc.createSale(address(_nft721), 1, 2 ether);
+
+        vm.startPrank(bidder);
+        uint256 bidPrice = 1 ether / 2;
+        //Bidder approves marketplace to spend WETH on its behalf and creates a new bid on saleOrder 1
+        _weth.approve(address(_mkpc), 10 ether);
+        _mkpc.createBid(1, bidPrice, 2 weeks);
+        vm.stopPrank();
+
+        //Check that contract's balance is 0
+        vm.prank(owner);
+        uint256 balanceContractBefore = _mkpc.getWethFees();
+        assertEq(balanceContractBefore, 0);
+
+        vm.startPrank(seller);
+        //seller accepts the bid
+        _mkpc.acceptBid(1, 0);
+        vm.stopPrank();
+
+        uint256 fees = bidPrice / 10;
+
+        vm.startPrank(owner);
+        //Check that the fees have been added to contract balance
+        uint256 balanceContractAfter = _mkpc.getWethFees();
+        assertEq(balanceContractAfter, balanceContractBefore + fees);
+
+        //Withdrawing Weth Fees from contract
+        _mkpc.withdrawWethFees();
+        uint256 balanceContractAfterWithdraw = _mkpc.getWethFees();
+        assertEq(balanceContractAfterWithdraw, 0);
+        vm.stopPrank();
+    }
+
     function test_Weth_Fees_Withdraw() public {
         vm.prank(seller);
         //Seller creates a new sale

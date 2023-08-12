@@ -10,19 +10,28 @@ import "./SetUp.t.sol";
 contract Security_Checks is SetUp {
     function test_SetUp() public {}
 
-    ///BUG: should revert
-    function testFail_Receive_function() public {
+    function test_SupportInterface() public {}
+
+    function test_OnERC721Received() public {}
+
+    function test_OnERC1155Received() public {}
+
+    function test_OnERC1155BatchReceived() public {}
+
+    ///TODO: call return = true ?
+    function test_Revert_Receive_function() public {
         vm.prank(buyer);
-        // vm.expectRevert();
+        vm.expectRevert();
         (bool sent,) = address(_mkpc).call{value: 1 ether}("");
-        assertEq(sent, true);
+        assertTrue(sent);
     }
 
-    function testFail_Fallback_function() public {
+    //TODO: call return = true ?
+    function test_Revert_Fallback_function() public {
         vm.prank(buyer);
         vm.expectRevert("not allowed fallback");
         (bool sent,) = address(_mkpc).call("");
-        assertFalse(sent);
+        assertTrue(sent);
     }
 
     //Direct transfer from safeTransferFrom() disabled
