@@ -12,9 +12,15 @@ contract Security_Checks is SetUp {
 
     function test_SupportInterface() public {}
 
-    function test_OnERC721Received() public {}
+    function test_OnERC721Received() public {
+        (bytes4 ERC721selector) = _mkpc.onERC721Received((address(_mkpc)), seller, 1, "");
+        assertEq(ERC721selector, IERC721Receiver.onERC721Received.selector);
+    }
 
-    function test_OnERC1155Received() public {}
+    function test_OnERC1155Received() public {
+        (bytes4 ERC1155selector) = _mkpc.onERC1155Received((address(_mkpc)), seller, 1, 1, "");
+        assertEq(ERC1155selector, IERC1155Receiver.onERC1155Received.selector);
+    }
 
     function test_OnERC1155BatchReceived() public {}
 

@@ -64,10 +64,14 @@ contract SetUp is Test {
         _nft1155 = new NFT1155(25);
         _nft721.transferFrom(owner, seller, 1);
         _nft721.transferFrom(owner, seller, 2);
+        _nft1155.mint(2, 15);
+        _nft1155.safeTransferFrom(owner, seller, 1, 1, "");
+        _nft1155.safeTransferFrom(owner, seller, 2, 1, "");
         vm.stopPrank();
 
         //Seller approves marketplace to transfer NFT on its behalf
-        vm.prank(seller);
+        vm.startPrank(seller);
         _nft721.setApprovalForAll(address(_mkpc), true);
+        _nft1155.setApprovalForAll(address(_mkpc), true);
     }
 }

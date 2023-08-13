@@ -23,16 +23,23 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Receiver, Ownable {
-    uint256 public marketOffersNonce = 1;
     /// sale id - all sales ongoing and closed
-    uint256 public marketPlaceFee;
+    uint256 public marketOffersNonce = 1;
+
     /// percentage of the fee. starts at 0, cannot be more than 10
+    uint256 public marketPlaceFee;
+
+    /// All the fees in ETH gathered by the markeplace
     uint256 private _ethFees;
-    /// All the fees gathered by the markeplace
+
+    /// All the fees in WETH gathered by the markeplace
     uint256 private _wethFees;
+
+    //WETH contract
+    //TODO: better to have contract object or address ?
     ERC20 public immutable WETH;
     mapping(uint256 => SaleOrder) public marketOffers;
-    mapping(address => uint256) public balanceOfEth;
+    // mapping(address => uint256) public balanceOfEth;
 
     struct SaleOrder {
         /// price of the sale
@@ -64,19 +71,11 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         uint256 offerTime;
     }
 
-    error offerClosed();
-
-    error failedToSend_ETH();
-
-    error failedToSend_WETH();
-
-    error notOwner(string);
-
-    error notEnoughBalance();
-
-    error notApproved();
-
-    error standardNotRecognized();
+    //=============================================
+    //
+    //           EVENTS
+    //
+    //=============================================
 
     /**
      * @notice Emitted when a NFT is received
@@ -128,6 +127,26 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
      * @notice Emitted when the markeplace fees are modified
      */
     event FeesModified(uint256 newFees);
+
+    //===========================================
+    //
+    //           ERRORS
+    //
+    //===========================================
+
+    error offerClosed();
+
+    error failedToSend_ETH();
+
+    error failedToSend_WETH();
+
+    error notOwner(string);
+
+    error notEnoughBalance();
+
+    error notApproved();
+
+    error standardNotRecognized();
 
     constructor(address _WETH, uint256 _fees) {
         WETH = ERC20(_WETH);
@@ -437,11 +456,13 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         emit BidSubmitted(marketOfferId, msg.sender, amount);
     }
 
-    //TODO: add duration modif
+    //TODO: add duration modif?
+    //TODO: natspec
     /**
      *
      */
     function modifyBid(uint256 marketOfferId, uint256 bidIndex, uint256 newPrice) external {
+        //Only bidder can modify its bid
         if (marketOffers[marketOfferId].bids[bidIndex].bidder != msg.sender) revert notOwner("Bid");
 
         ///Only if offer is still ongoing
@@ -467,7 +488,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         require(marketOffers[marketOfferId].bids.length != 0, "no bids");
 
         ///Revert if bid index doesn't exist
-        require(marketOffers[marketOfferId].bids.length - 1 >= bidIndex, "bidIndex out of bounds");
+        require(marketOffers[marketOfferId].bids.length - 1 >= bidIndex, "index out of bounds");
 
         ///Only bidder can cancel a bid
         if (msg.sender != marketOffers[marketOfferId].bids[bidIndex].bidder) revert notOwner("Bid");
@@ -508,13 +529,14 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
             WETH.allowance(offer.bidder, address(this)) >= order.bids[index].offerPrice, "Bidder: not enough allowance"
         );
 
+        /// update buyer
         order.buyer = offer.bidder;
 
-        /// update buyer
-        order.price = offer.offerPrice;
         /// update sell price
-        order.closed = true;
+        order.price = offer.offerPrice;
+
         /// offer is now over
+        order.closed = true;
 
         /// Fees of the marketplace
         uint256 afterFees = offer.offerPrice - ((offer.offerPrice * marketPlaceFee) / 100);
@@ -523,12 +545,10 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         if (order.standard == type(IERC721).interfaceId) {
             ERC721(order.contractAddress).safeTransferFrom(address(this), order.buyer, order.tokenId);
         }
-        /// transfer NFT to new owner
+        /// transfer NFT ERC1155 to new owner
         else if (order.standard == type(IERC1155).interfaceId) {
             ERC1155(order.contractAddress).safeTransferFrom(address(this), order.buyer, order.tokenId, 1, "");
-        }
-        /// transfer NFT ERC1155 to new owner
-        else {
+        } else {
             revert standardNotRecognized();
         }
 
@@ -550,27 +570,21 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
     {
         SaleOrder storage order = marketOffers[marketOffersNonce];
 
+        /// collection address
         order.contractAddress = contractAddress;
 
-        /// collection address
-        order.seller = seller;
         /// seller address , cannot be msg.sender since internal
-        order.price = price;
-        ///sale price
-        order.tokenId = tokenId;
-        order.standard = standard;
-        ///NFT's standard
+        order.seller = seller;
 
-        emit SaleCreated(
-            marketOffersNonce,
-            ///id of the new offer
-            seller,
-            ///seller address
-            tokenId,
-            contractAddress,
-            standard,
-            price
-        );
+        ///sale price
+        order.price = price;
+
+        order.tokenId = tokenId;
+
+        ///NFT's standard
+        order.standard = standard;
+
+        emit SaleCreated(marketOffersNonce, seller, tokenId, contractAddress, standard, price);
         marketOffersNonce++;
     }
 
@@ -597,7 +611,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
     }
 
     /// ================================
-    ///       Getters
+    ///            VIEWS
     /// ================================
 
     /**

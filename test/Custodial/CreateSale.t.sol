@@ -42,10 +42,20 @@ contract CreateSale is SetUp {
     //Check reverts if standard is not erc721 or erc1155 (supportsInterface)
     function test_Revert_CreateSale_Standard_Not_Recognized() public {}
 
-    function test_CreateSale() public {
+    function test_CreateSale_ERC721() public {
         vm.prank(seller);
         //Create sale
         _mkpc.createSale(address(_nft721), 1, 2 ether);
+
+        //Verify that seller is registered
+        address seller_ = _mkpc.getSaleOrder(1).seller;
+        assertEq(seller, seller_);
+    }
+
+    function test_CreateSale_ERC1155() public {
+        vm.prank(seller);
+        //Create sale
+        _mkpc.createSale(address(_nft1155), 1, 2 ether);
 
         //Verify that seller is registered
         address seller_ = _mkpc.getSaleOrder(1).seller;
