@@ -74,4 +74,16 @@ contract SetUp is Test {
         _nft721.setApprovalForAll(address(_mkpc), true);
         _nft1155.setApprovalForAll(address(_mkpc), true);
     }
+
+    function test_SetUp() public {
+        setUp();
+        assertEq(owner.balance, 1 ether);
+        assertEq(seller.balance, 10 ether);
+        assertEq(buyer.balance, 5 ether);
+        assertEq(bidder.balance, 1 ether);
+
+        assertEq(_weth.balanceOf(seller), 10 ether);
+        assertEq(_weth.balanceOf(buyer), 5 ether);
+        assertEq(_weth.balanceOf(bidder), 1 ether);
+    }
 }

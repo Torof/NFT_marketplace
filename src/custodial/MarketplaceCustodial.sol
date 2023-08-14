@@ -462,14 +462,16 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
      *
      */
     function modifyBid(uint256 marketOfferId, uint256 bidIndex, uint256 newPrice) external {
+        require(marketOffers[marketOfferId].bids.length != 0, "no bids");
+
+        ///Revert if bid index doesn't exist
+        require(marketOffers[marketOfferId].bids.length - 1 >= bidIndex, "index out of bounds");
+
         //Only bidder can modify its bid
         if (marketOffers[marketOfferId].bids[bidIndex].bidder != msg.sender) revert notOwner("Bid");
 
         ///Only if offer is still ongoing
         if (marketOffers[marketOfferId].closed) revert offerClosed();
-
-        ///Revert if bid index doesn't exist
-        require(marketOffers[marketOfferId].bids.length - 1 >= bidIndex, "index out of bounds");
 
         ///Set new price of bid
         marketOffers[marketOfferId].bids[bidIndex].offerPrice = newPrice;

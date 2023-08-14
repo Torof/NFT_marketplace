@@ -8,7 +8,8 @@ pragma solidity 0.8.18;
 import "./SetUp.t.sol";
 
 contract Security_Checks is SetUp {
-    function test_SetUp() public {}
+    uint256[] helperId = [1, 2];
+    uint256[] helperAmount = [1, 1];
 
     function test_SupportInterface() public {}
 
@@ -22,7 +23,11 @@ contract Security_Checks is SetUp {
         assertEq(ERC1155selector, IERC1155Receiver.onERC1155Received.selector);
     }
 
-    function test_OnERC1155BatchReceived() public {}
+    function test_OnERC1155BatchReceived() public {
+        (bytes4 ERC1155Batchselector) =
+            _mkpc.onERC1155BatchReceived((address(_mkpc)), seller, helperId, helperAmount, "");
+        assertEq(ERC1155Batchselector, IERC1155Receiver.onERC1155BatchReceived.selector);
+    }
 
     ///TODO: call return = true ?
     function test_Revert_Receive_function() public {
