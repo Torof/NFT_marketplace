@@ -5,9 +5,9 @@ pragma solidity 0.8.18;
  * @notice the 'ether' modifier is used to signify units. Some functions use the 'ether' modifier while the currency is in WETH.
  */
 
-import "./SetUp.t.sol";
+import "./BaseSetUp.t.sol";
 
-contract CreateBid is SetUp {
+contract CreateBid is BaseSetUp {
     function test_Revert_CreateBid_If_Offer_Not_GT_0() public {
         vm.prank(seller);
         //Create a sale

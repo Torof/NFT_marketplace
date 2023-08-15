@@ -6,9 +6,9 @@ pragma solidity 0.8.18;
  */
 
 //TODO: test fees withdrawing
-import "./SetUp.t.sol";
+import "./BaseSetUp.t.sol";
 
-contract Fees is SetUp {
+contract Fees is BaseSetUp {
     function test_Revert_GetEthFees_Not_Owner() public {
         vm.expectRevert("Ownable: caller is not the owner");
         _mkpc.getEthFees();

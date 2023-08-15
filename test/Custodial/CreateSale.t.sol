@@ -5,9 +5,9 @@ pragma solidity 0.8.18;
  * @notice the 'ether' modifier is used to signify units. Some functions use the 'ether' modifier while the currency is in WETH.
  */
 
-import "./SetUp.t.sol";
+import "./BaseSetUp.t.sol";
 
-contract CreateSale is SetUp {
+contract CreateSale is BaseSetUp {
     //Revert if caller is not owner of NFT
 
     function test_Revert_CreateSale_if_NotOwner() public {

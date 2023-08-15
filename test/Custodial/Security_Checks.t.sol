@@ -5,15 +5,26 @@ pragma solidity 0.8.18;
  * @notice the 'ether' modifier is used to signify units. Some functions use the 'ether' modifier while the currency is in WETH.
  */
 
-import "./SetUp.t.sol";
+import "./BaseSetUp.t.sol";
 
-contract Security_Checks is SetUp {
+contract Security_Checks is BaseSetUp {
     uint256[] helperId = [1, 2];
     uint256[] helperAmount = [1, 1];
 
-    function test_SupportInterface() public {}
+    function test_SupportInterface(bytes4 wrongInterfaceId) public {
+        bool supportsIERC721Receiver = _mkpc.supportsInterface(type(IERC721Receiver).interfaceId);
+        bool supportsIERC1155Receiver = _mkpc.supportsInterface(type(IERC1155Receiver).interfaceId);
+        bool supportsIERC165 = _mkpc.supportsInterface(type(IERC165).interfaceId);
 
-    function test_OnERC721Received() public {
+        bool otherbytes4 = _mkpc.supportsInterface(wrongInterfaceId);
+
+        assertTrue(supportsIERC721Receiver);
+        assertTrue(supportsIERC1155Receiver);
+        assertTrue(supportsIERC165);
+        assertFalse(otherbytes4);
+    }
+
+    function test_onErc721Received() public {
         (bytes4 ERC721selector) = _mkpc.onERC721Received((address(_mkpc)), seller, 1, "");
         assertEq(ERC721selector, IERC721Receiver.onERC721Received.selector);
     }
@@ -29,7 +40,7 @@ contract Security_Checks is SetUp {
         assertEq(ERC1155Batchselector, IERC1155Receiver.onERC1155BatchReceived.selector);
     }
 
-    ///TODO: call return = true ?
+    ///TODO: call return = true ? ===> use mockcall()
     function test_Revert_Receive_function() public {
         vm.prank(buyer);
         vm.expectRevert();
@@ -37,7 +48,7 @@ contract Security_Checks is SetUp {
         assertTrue(sent);
     }
 
-    //TODO: call return = true ?
+    //TODO: call return = true ? ===> use mockcall()
     function test_Revert_Fallback_function() public {
         vm.prank(buyer);
         vm.expectRevert("not allowed fallback");
@@ -53,7 +64,7 @@ contract Security_Checks is SetUp {
         _nft721.safeTransferFrom(seller, address(_mkpc), 1);
     }
 
-    function test_Revert_UnlockNFT_If_Caller_Is_Not_Contract_Owner() public {
+    function test_revert_unlockNFft_If_Caller_Is_Not_Contract_Owner(address randomAddress) public {
         vm.startPrank(seller);
         ///Unsafe transfer of NFT to markeplace
         _nft721.transferFrom(seller, address(_mkpc), 1);
@@ -64,11 +75,11 @@ contract Security_Checks is SetUp {
         ///Revert if caller is not contract owner
         vm.expectRevert("Ownable: caller is not the owner");
 
-        _mkpc.unlockNFT(address(_nft721), 1, seller);
+        _mkpc.unlockNFT(address(_nft721), 1, randomAddress);
         vm.stopPrank();
     }
 
-    function test_UnlockNFT() public {
+    function test_unlockNFT() public {
         vm.prank(seller);
         ///Unsafe transfer of NFT to markeplace
         _nft721.transferFrom(seller, address(_mkpc), 1);

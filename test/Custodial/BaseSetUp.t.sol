@@ -15,7 +15,7 @@ import "../../src/testing/NFT721.sol";
 import "../../src/testing/NFT1155.sol";
 import "../../src/custodial/MarketplaceCustodial.sol";
 
-contract SetUp is Test {
+contract BaseSetUp is Test {
     WETH public _weth;
     MarketplaceCustodial public _mkpc;
     NFT721 public _nft721;
@@ -44,7 +44,7 @@ contract SetUp is Test {
      */
     event SaleModified(uint256 marketOfferId, uint256 newPrice);
 
-    function setUp() public {
+    function setUp() public virtual {
         //Create WETH for testing
         _weth = new WETH();
 
@@ -73,17 +73,5 @@ contract SetUp is Test {
         vm.startPrank(seller);
         _nft721.setApprovalForAll(address(_mkpc), true);
         _nft1155.setApprovalForAll(address(_mkpc), true);
-    }
-
-    function test_SetUp() public {
-        setUp();
-        assertEq(owner.balance, 1 ether);
-        assertEq(seller.balance, 10 ether);
-        assertEq(buyer.balance, 5 ether);
-        assertEq(bidder.balance, 1 ether);
-
-        assertEq(_weth.balanceOf(seller), 10 ether);
-        assertEq(_weth.balanceOf(buyer), 5 ether);
-        assertEq(_weth.balanceOf(bidder), 1 ether);
     }
 }

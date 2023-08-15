@@ -7,9 +7,9 @@ pragma solidity 0.8.18;
 
 //TODO: write tests
 
-import "./SetUp.t.sol";
+import "./BaseSetUp.t.sol";
 
-contract ModifyBid is SetUp {
+contract ModifyBid is BaseSetUp {
     function testRevert_ModifyBid_Not_Bid_Owner() public {
         vm.prank(seller);
         //Create a sale
@@ -40,7 +40,7 @@ contract ModifyBid is SetUp {
         _mkpc.createBid(1, 1 ether + (1 ether * 5 / 10), 1 weeks);
 
         //wrong index, should revert
-        vm.expectRevert("Index out of bounds");
+        vm.expectRevert("index out of bounds");
         _mkpc.modifyBid(1, 2, 1 ether);
 
         //cancel bid 0

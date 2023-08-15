@@ -14,37 +14,37 @@ contract NFT721 is ERC721Enumerable {
         _safeMint(msg.sender, totalSupply());
     }
 
-    function mint(uint256 amount) external {
-        for (uint256 i = 0; i < amount; i++) {
-            _safeMint(msg.sender, totalSupply());
-        }
-    }
+    // function mint(uint256 amount) external {
+    //     for (uint256 i = 0; i < amount; i++) {
+    //         _safeMint(msg.sender, totalSupply());
+    //     }
+    // }
 
-    function reveal() external {
-        revealed = true;
-    }
+    // function reveal() external {
+    //     revealed = true;
+    // }
 
-    /**
-     * @dev See {IERC721Metadata-tokenURI}.
-     */
-    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
-        _requireMinted(tokenId);
+    // /**
+    //  * @dev See {IERC721Metadata-tokenURI}.
+    //  */
+    // function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+    //     _requireMinted(tokenId);
 
-        string memory tier;
+    //     string memory tier;
 
-        if (revealed) tier = "test_metadata.json";
-        else tier = "unrevealed.json";
+    //     if (revealed) tier = "test_metadata.json";
+    //     else tier = "unrevealed.json";
 
-        string memory baseURI = _baseURI();
-        return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tier)) : "";
-    }
+    //     string memory baseURI = _baseURI();
+    //     return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tier)) : "";
+    // }
 
-    /**
-     * @dev Base URI for computing {tokenURI}. If set, the resulting URI for each
-     * token will be the concatenation of the `baseURI` and the `tokenId`. Empty
-     * by default, can be overridden in child contracts.
-     */
-    function _baseURI() internal view virtual override returns (string memory) {
-        return "https://ipfs.io/ipfs/QmWRVVr8jZEJnvFXuADH5QkMMPiSBVAongdVXLrMSbqBN3";
-    }
+    // /**
+    //  * @dev Base URI for computing {tokenURI}. If set, the resulting URI for each
+    //  * token will be the concatenation of the `baseURI` and the `tokenId`. Empty
+    //  * by default, can be overridden in child contracts.
+    //  */
+    // function _baseURI() internal view virtual override returns (string memory) {
+    //     return "https://ipfs.io/ipfs/QmWRVVr8jZEJnvFXuADH5QkMMPiSBVAongdVXLrMSbqBN3";
+    // }
 }
