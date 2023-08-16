@@ -15,13 +15,13 @@ contract ModifyBid is BaseSetUp {
         //Create a sale
         _mkpc.createSale(address(_nft721), 1, 2 ether);
 
-        vm.startPrank(buyer);
+        vm.startPrank(bidder);
         //approve for  eth allowance
         _weth.approve(address(_mkpc), 2 ether);
         //Create a bid for 1.5 eth
         _mkpc.createBid(1, 1 ether + (1 ether * 5 / 10), 1 weeks);
         vm.stopPrank();
-        vm.prank(bidder);
+        vm.prank(buyer);
         bytes4 selector = bytes4(keccak256("notOwner(string)"));
         vm.expectRevert(abi.encodeWithSelector(selector, "Bid"));
         _mkpc.modifyBid(1, 0, 1 ether);
@@ -33,7 +33,7 @@ contract ModifyBid is BaseSetUp {
         //Create a sale
         _mkpc.createSale(address(_nft721), 1, 2 ether);
 
-        vm.startPrank(buyer);
+        vm.startPrank(bidder);
         //approve for  WETH allowance
         _weth.approve(address(_mkpc), 5 ether);
         //Create a bid for 1.5 eth
@@ -52,7 +52,62 @@ contract ModifyBid is BaseSetUp {
         vm.stopPrank();
     }
 
-    function testRevert_ModifyBid_Offer_Closed() public {}
-    function test_ModifyBid() public {}
-    function test_Emit_ModifyBid_BidModified() public {}
+    function testRevert_ModifyBid_Offer_Closed() public {
+        vm.prank(seller);
+        //Create a sale
+        _mkpc.createSale(address(_nft721), 1, 2 ether);
+
+        vm.startPrank(bidder);
+        //approve for  WETH allowance
+        _weth.approve(address(_mkpc), 5 ether);
+        //Create a bid for 1.5 eth
+        _mkpc.createBid(1, 1 ether + (1 ether * 5 / 10), 1 weeks);
+
+        vm.prank(seller);
+        //cancel sale 1
+        _mkpc.cancelSale(1);
+
+        vm.startPrank(bidder);
+        //offer is closed, should revert
+        bytes4 selector = bytes4(keccak256("offerClosed()"));
+        vm.expectRevert(selector);
+        _mkpc.modifyBid(1, 0, 1 ether);
+        vm.stopPrank();
+        assertTrue(_mkpc.getSaleOrder(1).closed);
+    }
+
+    function test_ModifyBid() public {
+        vm.prank(seller);
+        //Create a sale
+        _mkpc.createSale(address(_nft721), 1, 2 ether);
+
+        vm.startPrank(bidder);
+        //approve for  WETH allowance
+        _weth.approve(address(_mkpc), 5 ether);
+        //Create a bid for 1.5 eth
+        _mkpc.createBid(1, 1 ether + (1 ether * 5 / 10), 1 weeks);
+        uint256 newPrice = 1 ether;
+        _mkpc.modifyBid(1, 0, newPrice);
+        vm.stopPrank();
+        MarketplaceCustodial.Bid memory bid = _mkpc.getSaleOrder(1).bids[0];
+        assertEq(bid.bidder, bidder);
+        assertEq(bid.bidPrice, newPrice);
+    }
+
+    function test_Emit_ModifyBid_BidModified() public {
+        vm.prank(seller);
+        //Create a sale
+        _mkpc.createSale(address(_nft721), 1, 2 ether);
+
+        vm.startPrank(bidder);
+        //approve for  WETH allowance
+        _weth.approve(address(_mkpc), 5 ether);
+        //Create a bid for 1.5 eth
+        _mkpc.createBid(1, 1 ether + (1 ether * 5 / 10), 1 weeks);
+        uint256 newPrice = 1 ether;
+        vm.expectEmit();
+        emit BidModified(1, bidder, newPrice);
+        _mkpc.modifyBid(1, 0, newPrice);
+        vm.stopPrank();
+    }
 }

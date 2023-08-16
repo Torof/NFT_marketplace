@@ -66,7 +66,9 @@ contract AcceptBid is BaseSetUp {
         bool approved = _weth.approve(address(_mkpc), 10 ether);
         assertEq(approved, true, "approval unsuccesful");
         _mkpc.createBid(1, 1 ether * (5 / 10), 2 weeks);
-        _weth.transfer(empty, 1 ether);
+
+        //Change bidder balance to 0
+        deal(address(_weth), bidder, 0);
         vm.stopPrank();
 
         vm.startPrank(seller);

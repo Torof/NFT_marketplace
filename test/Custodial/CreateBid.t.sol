@@ -100,7 +100,7 @@ contract CreateBid is BaseSetUp {
         //Check bid's information is correct
         MarketplaceCustodial.Bid memory firstBid = _mkpc.getSaleOrder(1).bids[0];
         assertEq(firstBid.bidder, buyer);
-        assertEq(firstBid.offerPrice, 1 ether + (1 ether * 5 / 10));
+        assertEq(firstBid.bidPrice, 1 ether + (1 ether * 5 / 10));
         assertEq(firstBid.duration, 1 weeks);
     }
 

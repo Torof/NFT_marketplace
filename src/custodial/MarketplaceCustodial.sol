@@ -64,7 +64,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         ///Address that made the bid
         address bidder;
         ///Price of the bid
-        uint256 offerPrice;
+        uint256 bidPrice;
         ///Maximum duration of the bid
         uint256 duration;
         ///Time at which the bid was initiated. Used to calculate max duration
@@ -449,7 +449,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         //WETH allowance from bidder to marketplace
         require(WETH.allowance(msg.sender, address(this)) >= amount, "not enough balance allowed");
 
-        Bid memory tempO = Bid({bidder: msg.sender, offerTime: block.timestamp, offerPrice: amount, duration: duration});
+        Bid memory tempO = Bid({bidder: msg.sender, offerTime: block.timestamp, bidPrice: amount, duration: duration});
 
         ///Submit new bid to order's bid list
         marketOffers[marketOfferId].bids.push(tempO);
@@ -474,7 +474,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         if (marketOffers[marketOfferId].closed) revert offerClosed();
 
         ///Set new price of bid
-        marketOffers[marketOfferId].bids[bidIndex].offerPrice = newPrice;
+        marketOffers[marketOfferId].bids[bidIndex].bidPrice = newPrice;
 
         emit BidModified(marketOfferId, msg.sender, newPrice);
     }
@@ -526,23 +526,23 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
 
         //TODO: change to custom error
         require(block.timestamp < offer.offerTime + offer.duration, "offer expired");
-        require(WETH.balanceOf(offer.bidder) > offer.offerPrice, "WETH: not enough balance");
+        require(WETH.balanceOf(offer.bidder) > offer.bidPrice, "WETH: not enough balance");
         require(
-            WETH.allowance(offer.bidder, address(this)) >= order.bids[index].offerPrice, "Bidder: not enough allowance"
+            WETH.allowance(offer.bidder, address(this)) >= order.bids[index].bidPrice, "Bidder: not enough allowance"
         );
 
         /// update buyer
         order.buyer = offer.bidder;
 
         /// update sell price
-        order.price = offer.offerPrice;
+        order.price = offer.bidPrice;
 
         /// offer is now over
         order.closed = true;
 
         /// Fees of the marketplace
-        uint256 afterFees = offer.offerPrice - ((offer.offerPrice * marketPlaceFee) / 100);
-        _wethFees += (offer.offerPrice * marketPlaceFee) / 100;
+        uint256 afterFees = offer.bidPrice - ((offer.bidPrice * marketPlaceFee) / 100);
+        _wethFees += (offer.bidPrice * marketPlaceFee) / 100;
 
         if (order.standard == type(IERC721).interfaceId) {
             ERC721(order.contractAddress).safeTransferFrom(address(this), order.buyer, order.tokenId);
@@ -557,10 +557,10 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         bool sent1 = ERC20(WETH).transferFrom(offer.bidder, msg.sender, afterFees);
         if (!sent1) revert failedToSend_WETH();
 
-        bool sent2 = ERC20(WETH).transferFrom(offer.bidder, address(this), (offer.offerPrice * marketPlaceFee) / 100);
+        bool sent2 = ERC20(WETH).transferFrom(offer.bidder, address(this), (offer.bidPrice * marketPlaceFee) / 100);
         if (!sent2) revert failedToSend_WETH();
 
-        emit SaleSuccessful(marketOfferId, order.seller, order.buyer, offer.offerPrice);
+        emit SaleSuccessful(marketOfferId, order.seller, order.buyer, offer.bidPrice);
     }
 
     /// ================================

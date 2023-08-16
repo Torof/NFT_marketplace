@@ -38,6 +38,7 @@ contract BaseSetUp is Test {
     event SaleSuccessful(uint256 marketOfferId, address seller, address buyer, uint256 price);
     event BidSubmitted(uint256 marketOfferId, address offerer, uint256 offerPrice);
     event BidCanceled(uint256 marketOfferId, address offererAddress, uint256 canceledOffer);
+    event BidModified(uint256 marketOfferId, address bidder, uint256 newPrice);
     event FeesModified(uint256 newFees);
     /**
      * @notice Emitted when a seller cancel its sale
@@ -52,10 +53,10 @@ contract BaseSetUp is Test {
         vm.deal(owner, 1 ether);
         vm.deal(seller, 10 ether);
         vm.deal(buyer, 5 ether);
-        vm.deal(bidder, 1 ether);
+        vm.deal(bidder, 2 ether);
         deal(address(_weth), seller, 10 ether);
         deal(address(_weth), buyer, 5 ether);
-        deal(address(_weth), bidder, 1 ether);
+        deal(address(_weth), bidder, 2 ether);
 
         //Deploy marketplace and 2 NFT collections, erc721 and erc1155
         vm.startPrank(owner);
@@ -73,5 +74,9 @@ contract BaseSetUp is Test {
         vm.startPrank(seller);
         _nft721.setApprovalForAll(address(_mkpc), true);
         _nft1155.setApprovalForAll(address(_mkpc), true);
+    }
+
+    function test_setUp() public {
+        setUp();
     }
 }
