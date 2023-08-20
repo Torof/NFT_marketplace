@@ -7,7 +7,7 @@ pragma solidity 0.8.18;
 
 //TODO: write tests
 
-import "./BaseSetUp.t.sol";
+import "./BaseSetUp.sol";
 
 contract ModifyBid is BaseSetUp {
     function testRevert_ModifyBid_Not_Bid_Owner() public {

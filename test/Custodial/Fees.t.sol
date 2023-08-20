@@ -6,7 +6,7 @@ pragma solidity 0.8.18;
  */
 
 //TODO: test fees withdrawing
-import "./BaseSetUp.t.sol";
+import "./BaseSetUp.sol";
 
 contract Fees is BaseSetUp {
     function test_Revert_GetEthFees_Not_Owner() public {

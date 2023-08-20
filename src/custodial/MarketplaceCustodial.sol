@@ -2,6 +2,8 @@
 /// TODO: gas opti
 /// CHECK: if offer expired , delete offer ?
 
+//ALERT: ERC20 boolean might not be return, decode return data
+
 /**
  * @author Torof
  * @title  A custodial NFT MarketPlace
@@ -24,7 +26,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Receiver, Ownable {
     /// sale id - all sales ongoing and closed
-    uint256 public marketOffersNonce = 1;
+    uint256 public marketOffersNonce;
 
     /// percentage of the fee. starts at 0, cannot be more than 10
     uint256 public marketPlaceFee;
@@ -60,6 +62,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         Bid[] bids;
     }
 
+    //TODO: change uints to pack ?
     struct Bid {
         ///Address that made the bid
         address bidder;
@@ -151,6 +154,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
     constructor(address _WETH, uint256 _fees) {
         WETH = ERC20(_WETH);
         marketPlaceFee = _fees;
+        marketOffersNonce = 1;
     }
 
     /// ==========================================
@@ -173,6 +177,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
             || interfaceId == type(IERC165).interfaceId;
     }
 
+    //TODO: instead of disallowing direct transfers, register NFT and allow withdrawal ?
     /**
      * @notice         MUST be implemented to be compatible with all ERC721 standards NFTs
      * @return bytes4  function {onERC721Received} selector
@@ -250,6 +255,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         emit FeesModified(newFees);
     }
 
+    //TODO: add event
     /**
      * @notice withdraw all gains in ETH made from the sales fees all at once.
      */
@@ -260,6 +266,7 @@ contract MarketplaceCustodial is ReentrancyGuard, IERC721Receiver, IERC1155Recei
         if (!sent) revert failedToSend_ETH();
     }
 
+    //TODO: add event
     /**
      * @notice withdraw all gains made in WETH from the sales fees all at once.
      */
