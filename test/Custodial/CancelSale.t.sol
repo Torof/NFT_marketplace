@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.18;
-
+pragma solidity 0.8.20;
 /**
  * @notice the 'ether' modifier is used to signify units. Some functions use the 'ether' modifier while the currency is in WETH.
  */
@@ -9,9 +8,9 @@ import "./BaseSetUp.sol";
 
 contract CancelSale is BaseSetUp {
     function test_Revert_CancelSale_if_Not_Owner() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         _mkpc.createSale(address(_nft721), 1, 2 ether);
-        vm.prank(buyer);
+        vm.startPrank(buyer);
         bytes4 selector = bytes4(keccak256("notOwner(string)"));
         vm.expectRevert(abi.encodeWithSelector(selector, "Sale"));
         _mkpc.cancelSale(1);

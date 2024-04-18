@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.18;
-
+pragma solidity 0.8.20;
 /**
  * @notice the 'ether' modifier is used to signify units. Some functions use the 'ether' modifier while the currency is in WETH.
  */
@@ -42,7 +41,7 @@ contract Security_Checks is BaseSetUp {
 
     ///TODO: call return = true ? ===> use mockcall()
     function test_Revert_Receive_function() public {
-        vm.prank(buyer);
+        vm.startPrank(buyer);
         vm.expectRevert();
         (bool sent,) = address(_mkpc).call{value: 1 ether}("");
         assertTrue(sent);
@@ -50,7 +49,7 @@ contract Security_Checks is BaseSetUp {
 
     //TODO: call return = true ? ===> use mockcall()
     function test_Revert_Fallback_function() public {
-        vm.prank(buyer);
+        vm.startPrank(buyer);
         vm.expectRevert("not allowed fallback");
         (bool sent,) = address(_mkpc).call("");
         assertTrue(sent);
@@ -59,7 +58,7 @@ contract Security_Checks is BaseSetUp {
     //Direct transfer from safeTransferFrom() disabled
     function test_Revert_On_Direct_Transfer() public {
         //Should revert if NFT is sent directly with SafeTransferFrom
-        vm.prank(seller, seller);
+        vm.startPrank(seller, seller);
         vm.expectRevert("direct transfer not allowed");
         _nft721.safeTransferFrom(seller, address(_mkpc), 1);
     }
@@ -80,12 +79,12 @@ contract Security_Checks is BaseSetUp {
     }
 
     function test_unlockNFT() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         ///Unsafe transfer of NFT to markeplace
         _nft721.transferFrom(seller, address(_mkpc), 1);
         ///Check markeplace is owner of NFT
         assertEq(_nft721.ownerOf(1), address(_mkpc));
-        vm.prank(owner);
+        vm.startPrank(owner);
         _mkpc.unlockNFT(address(_nft721), 1, seller);
     }
 }

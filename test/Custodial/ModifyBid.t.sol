@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.18;
-
+pragma solidity 0.8.20;
 /**
  * @notice the 'ether' modifier is used to signify units. Some functions use the 'ether' modifier while the currency is in WETH.
  */
@@ -11,28 +10,29 @@ import "./BaseSetUp.sol";
 
 contract ModifyBid is BaseSetUp {
     function testRevert_ModifyBid_Not_Bid_Owner() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         //Create a sale
         _mkpc.createSale(address(_nft721), 1, 2 ether);
-
+        vm.stopPrank();
         vm.startPrank(bidder);
         //approve for  eth allowance
         _weth.approve(address(_mkpc), 2 ether);
         //Create a bid for 1.5 eth
         _mkpc.createBid(1, 1 ether + (1 ether * 5 / 10), 1 weeks);
         vm.stopPrank();
-        vm.prank(buyer);
+        vm.startPrank(buyer);
         bytes4 selector = bytes4(keccak256("notOwner(string)"));
         vm.expectRevert(abi.encodeWithSelector(selector, "Bid"));
         _mkpc.modifyBid(1, 0, 1 ether);
+        vm.stopPrank();
     }
 
     //TODO: make it work
     function test_Revert_ModifyBid_Index_Out_Of_Bounds() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         //Create a sale
         _mkpc.createSale(address(_nft721), 1, 2 ether);
-
+        vm.stopPrank();
         vm.startPrank(bidder);
         //approve for  WETH allowance
         _weth.approve(address(_mkpc), 5 ether);
@@ -53,16 +53,16 @@ contract ModifyBid is BaseSetUp {
     }
 
     function testRevert_ModifyBid_Offer_Closed() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         //Create a sale
         _mkpc.createSale(address(_nft721), 1, 2 ether);
-
+    vm.stopPrank();
         vm.startPrank(bidder);
         //approve for  WETH allowance
         _weth.approve(address(_mkpc), 5 ether);
         //Create a bid for 1.5 eth
         _mkpc.createBid(1, 1 ether + (1 ether * 5 / 10), 1 weeks);
-
+        vm.stopPrank();
         vm.prank(seller);
         //cancel sale 1
         _mkpc.cancelSale(1);
@@ -77,10 +77,10 @@ contract ModifyBid is BaseSetUp {
     }
 
     function test_ModifyBid() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         //Create a sale
         _mkpc.createSale(address(_nft721), 1, 2 ether);
-
+        vm.stopPrank();
         vm.startPrank(bidder);
         //approve for  WETH allowance
         _weth.approve(address(_mkpc), 5 ether);
@@ -95,10 +95,10 @@ contract ModifyBid is BaseSetUp {
     }
 
     function test_Emit_ModifyBid_BidModified() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         //Create a sale
         _mkpc.createSale(address(_nft721), 1, 2 ether);
-
+        vm.stopPrank();
         vm.startPrank(bidder);
         //approve for  WETH allowance
         _weth.approve(address(_mkpc), 5 ether);

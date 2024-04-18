@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.18;
-
+pragma solidity 0.8.20;
 /**
  * @notice the 'ether' modifier is used to signify units. Some functions use the 'ether' modifier while the currency is in WETH.
  */
@@ -9,7 +8,7 @@ import "./BaseSetUp.sol";
 
 contract BuySale is BaseSetUp {
     function test_Revert_BuySale_If_Balance_Not_Enough() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         //Create a sale
         _mkpc.createSale(address(_nft721), 1, 2 ether);
 
@@ -18,14 +17,15 @@ contract BuySale is BaseSetUp {
         bytes4 selector = bytes4(keccak256("notEnoughBalance()"));
         vm.expectRevert(selector);
         _mkpc.buySale{value: 1 ether}(1);
+        
     }
 
     function test_Revert_BuySale_If_Price_Not_Right() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         //Create a sale
         _mkpc.createSale(address(_nft721), 1, 2 ether);
 
-        vm.prank(buyer);
+        vm.startPrank(buyer);
         //reverts because there isn't enough ether to cover the price
         vm.expectRevert("not the right amount");
         _mkpc.buySale{value: 1 ether}(1);
@@ -47,7 +47,7 @@ contract BuySale is BaseSetUp {
         isClosed = _mkpc.getSaleOrder(1).closed;
         assertEq(isClosed, true);
 
-        vm.prank(buyer);
+        vm.startPrank(buyer);
         //reverts because offer is closed
         bytes4 selector = bytes4(keccak256("offerClosed()"));
         vm.expectRevert(selector);
@@ -65,7 +65,7 @@ contract BuySale is BaseSetUp {
         bool isClosed = _mkpc.getSaleOrder(1).closed;
         assertEq(isClosed, false);
 
-        vm.prank(buyer);
+        vm.startPrank(buyer);
         //Buy sale
         _mkpc.buySale{value: 2 ether}(1);
 
@@ -87,7 +87,7 @@ contract BuySale is BaseSetUp {
         //Create a sale
         _mkpc.createSale(address(_nft721), 1, 2 ether);
 
-        vm.prank(buyer);
+        vm.startPrank(buyer);
         //Buy sale
         vm.expectEmit();
         // We emit the SaleSuccessful event we expect to see.

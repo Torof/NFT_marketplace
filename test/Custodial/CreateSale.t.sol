@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.18;
-
+pragma solidity 0.8.20;
 /**
  * @notice the 'ether' modifier is used to signify units. Some functions use the 'ether' modifier while the currency is in WETH.
  */
@@ -21,7 +20,7 @@ contract CreateSale is BaseSetUp {
 
     //Revert if seller did not approve markeplace to transfer NFT -- isApprovedForAll
     function test_Revert_CreateSale_if_NotApproved() public {
-        vm.prank(owner);
+        vm.startPrank(owner);
         //Send NFT to user to create sale
         _nft721.transferFrom(owner, buyer, 3);
 
@@ -34,7 +33,7 @@ contract CreateSale is BaseSetUp {
 
     //Revert if prive is negative or eq to 0
     function test_Revert_CreateSale_if_Price_Not_GT_Than_0() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         vm.expectRevert("price must be > 0");
         _mkpc.createSale(address(_nft721), 1, 0);
     }
@@ -43,7 +42,7 @@ contract CreateSale is BaseSetUp {
     function test_Revert_CreateSale_Standard_Not_Recognized() public {}
 
     function test_CreateSale_ERC721() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         //Create sale
         _mkpc.createSale(address(_nft721), 1, 2 ether);
 
@@ -53,7 +52,7 @@ contract CreateSale is BaseSetUp {
     }
 
     function test_CreateSale_ERC1155() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         //Create sale
         _mkpc.createSale(address(_nft1155), 1, 2 ether);
 
@@ -64,7 +63,7 @@ contract CreateSale is BaseSetUp {
 
     //TODO: complete
     function test_GetSaleOrder() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         //Create sale
         _mkpc.createSale(address(_nft721), 1, 2 ether);
 
@@ -74,7 +73,7 @@ contract CreateSale is BaseSetUp {
     }
 
     function test_Emit_CreateSale_SaleCreated() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
 
         vm.expectEmit();
 
@@ -86,7 +85,7 @@ contract CreateSale is BaseSetUp {
     }
 
     function test_Emit_CreateSale_NFTReceived() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
 
         vm.expectEmit();
 

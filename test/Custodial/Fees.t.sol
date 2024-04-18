@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.18;
-
+pragma solidity 0.8.20;
 /**
  * @notice the 'ether' modifier is used to signify units. Some functions use the 'ether' modifier while the currency is in WETH.
  */
@@ -20,7 +19,7 @@ contract Fees is BaseSetUp {
         uint256 salePrice = 2 ether;
         _mkpc.createSale(address(_nft721), 1, salePrice);
 
-        vm.prank(buyer);
+        vm.startPrank(buyer);
         //Buy sale
         _mkpc.buySale{value: 2 ether}(1);
 
@@ -35,11 +34,11 @@ contract Fees is BaseSetUp {
         uint256 salePrice = 2 ether;
         _mkpc.createSale(address(_nft721), 1, salePrice);
 
-        vm.prank(buyer);
+        vm.startPrank(buyer);
         //Buy sale
         _mkpc.buySale{value: 2 ether}(1);
 
-        vm.prank(owner);
+        vm.startPrank(owner);
         _mkpc.withdrawEthFees();
     }
 
@@ -49,7 +48,7 @@ contract Fees is BaseSetUp {
         uint256 salePrice = 2 ether;
         _mkpc.createSale(address(_nft721), 1, salePrice);
 
-        vm.prank(buyer);
+        vm.startPrank(buyer);
         //Buy sale
         _mkpc.buySale{value: 2 ether}(1);
 
@@ -67,7 +66,7 @@ contract Fees is BaseSetUp {
         // uint256 salePrice = 2 ether;
         // _mkpc.createSale(address(_nft721), 1, salePrice);
 
-        // vm.prank(buyer);
+        // vm.startPrank(buyer);
         // //Buy sale
         // _mkpc.buySale{value: 2 ether}(1);
 
@@ -80,7 +79,7 @@ contract Fees is BaseSetUp {
     }
 
     function test_Weth_Fees_Distributed() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         //Seller creates a new sale
         _mkpc.createSale(address(_nft721), 1, 2 ether);
 
@@ -110,7 +109,7 @@ contract Fees is BaseSetUp {
     }
 
     function test_GetWethFees() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         //Seller creates a new sale
         _mkpc.createSale(address(_nft721), 1, 2 ether);
 
@@ -122,7 +121,7 @@ contract Fees is BaseSetUp {
         vm.stopPrank();
 
         //Check that contract's balance is 0
-        vm.prank(owner);
+        vm.startPrank(owner);
         uint256 balanceContractBefore = _mkpc.getWethFees();
         assertEq(balanceContractBefore, 0);
 
@@ -146,7 +145,7 @@ contract Fees is BaseSetUp {
     }
 
     function test_Weth_Fees_Withdraw() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         //Seller creates a new sale
         _mkpc.createSale(address(_nft721), 1, 2 ether);
 
@@ -173,7 +172,7 @@ contract Fees is BaseSetUp {
 
         uint256 balanceOwnerBeforeWithdraw = _weth.balanceOf(address(owner));
         //Withdrawing Weth Fees from contract
-        vm.prank(owner);
+        vm.startPrank(owner);
         _mkpc.withdrawWethFees();
         uint256 balanceContractAfterWithdraw = _weth.balanceOf(address(_mkpc));
         assertEq(balanceContractAfterWithdraw, 0);

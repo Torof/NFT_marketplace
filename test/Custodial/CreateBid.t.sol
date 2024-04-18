@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.18;
-
+pragma solidity 0.8.20;
 /**
  * @notice the 'ether' modifier is used to signify units. Some functions use the 'ether' modifier while the currency is in WETH.
  */
@@ -9,11 +8,11 @@ import "./BaseSetUp.sol";
 
 contract CreateBid is BaseSetUp {
     function test_Revert_CreateBid_If_Offer_Not_GT_0() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         //Create a sale
         _mkpc.createSale(address(_nft721), 1, 2 ether);
 
-        vm.prank(buyer);
+        vm.startPrank(buyer);
         //Create a bid
         vm.expectRevert("amount can't be zero");
         _mkpc.createBid(1, 0, 1 weeks);
@@ -24,7 +23,7 @@ contract CreateBid is BaseSetUp {
     }
 
     function test_Revert_CreateBid_If_Allowance_Not_Enough() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         //Create a sale
         _mkpc.createSale(address(_nft721), 1, 4 ether);
 
@@ -47,11 +46,11 @@ contract CreateBid is BaseSetUp {
     }
 
     function test_Revert_CreateBid_If_Balance_Not_Enough() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         //Create a sale
         _mkpc.createSale(address(_nft721), 1, 2 ether);
 
-        vm.prank(buyer);
+        vm.startPrank(buyer);
         //Create a bid, should revert user doesn't have enough funds
         bytes4 selector = bytes4(keccak256("notEnoughBalance()"));
         vm.expectRevert(selector);
@@ -70,7 +69,7 @@ contract CreateBid is BaseSetUp {
         _mkpc.cancelSale(1);
         vm.stopPrank();
 
-        vm.prank(buyer);
+        vm.startPrank(buyer);
         //Create a bid, should revert because sale is over
         bytes4 selector = bytes4(keccak256("offerClosed()"));
         vm.expectRevert(selector);
@@ -83,7 +82,7 @@ contract CreateBid is BaseSetUp {
 
     //Create bid and check if bid is added to bids list
     function test_CreateBid() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         //Create a sale
         _mkpc.createSale(address(_nft721), 1, 2 ether);
 
@@ -105,7 +104,7 @@ contract CreateBid is BaseSetUp {
     }
 
     function test_Emit_CreateBid_BidSubmitted() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         //Create a sale
         _mkpc.createSale(address(_nft721), 1, 2 ether);
 

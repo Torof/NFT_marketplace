@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.18;
-
+pragma solidity 0.8.20;
 /**
  * @notice the 'ether' modifier is used to signify units. Some functions use the 'ether' modifier while the currency is in WETH.
  */
@@ -11,12 +10,14 @@ contract AcceptBid is BaseSetUp {
     function test_Revert_AcceptBid_If_SaleClosed() public {
         address ownerOf = _nft721.ownerOf(1);
         assertEq(seller, ownerOf);
-        vm.prank(seller);
+        vm.startPrank(seller);
         _mkpc.createSale(address(_nft721), 1, 2 ether);
+        vm.stopPrank();
 
         vm.startPrank(bidder);
         _weth.approve(address(_mkpc), 10 ether);
         _mkpc.createBid(1, 1 ether * (5 / 10), 2 weeks);
+        vm.stopPrank();
 
         vm.startPrank(seller);
         _mkpc.cancelSale(1);
@@ -27,8 +28,9 @@ contract AcceptBid is BaseSetUp {
     }
 
     function test_Revert_AcceptBid_Index_Out_Of_Bounds() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         _mkpc.createSale(address(_nft721), 1, 2 ether);
+        vm.stopPrank();
 
         vm.startPrank(bidder);
         _weth.approve(address(_mkpc), 10 ether);
@@ -42,8 +44,9 @@ contract AcceptBid is BaseSetUp {
     }
 
     function test_Revert_AcceptBid_If_Offer_Is_Expired() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         _mkpc.createSale(address(_nft721), 1, 2 ether);
+        vm.stopPrank();
 
         vm.startPrank(bidder);
         _weth.approve(address(_mkpc), 10 ether);
@@ -59,8 +62,9 @@ contract AcceptBid is BaseSetUp {
     }
 
     function test_Revert_AcceptBid_If_Bidder_Not_Enough_Balance() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         _mkpc.createSale(address(_nft721), 1, 2 ether);
+        vm.stopPrank();
 
         vm.startPrank(bidder, bidder);
         bool approved = _weth.approve(address(_mkpc), 10 ether);
@@ -78,8 +82,9 @@ contract AcceptBid is BaseSetUp {
     }
 
     function test_Revert_AcceptBid_If_Bidder_Not_Enough_Allowance() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         _mkpc.createSale(address(_nft721), 1, 2 ether);
+        vm.stopPrank();
 
         vm.startPrank(bidder);
         _weth.approve(address(_mkpc), 10 ether);
@@ -95,12 +100,14 @@ contract AcceptBid is BaseSetUp {
 
     //TODO: asserts : payment sent to previous owner, NFT sent to new owner
     function test_AcceptBid() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         _mkpc.createSale(address(_nft721), 1, 2 ether);
+        vm.stopPrank();
 
         vm.startPrank(bidder);
         _weth.approve(address(_mkpc), 10 ether);
         _mkpc.createBid(1, 1 ether * (5 / 10), 2 weeks);
+        vm.stopPrank();
 
         vm.startPrank(seller);
 
@@ -109,8 +116,9 @@ contract AcceptBid is BaseSetUp {
     }
 
     function test_Emit_AcceptBid_SaleSuccessful() public {
-        vm.prank(seller);
+        vm.startPrank(seller);
         _mkpc.createSale(address(_nft721), 1, 2 ether);
+        vm.stopPrank();
 
         vm.startPrank(bidder);
         _weth.approve(address(_mkpc), 10 ether);
