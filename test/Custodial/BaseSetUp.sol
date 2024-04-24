@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.20;
+pragma solidity 0.8.25;
 
 //TODO: test potential security issues
 //TODO: test scenarii
@@ -76,7 +76,7 @@ contract BaseSetUp is Test {
         _nft1155.setApprovalForAll(address(_mkpc), true);
     }
 
-    function test_setUp() public {
-        setUp();
-    }
+    // function test_setUp() public {
+    //     setUp();
+    // }
 }

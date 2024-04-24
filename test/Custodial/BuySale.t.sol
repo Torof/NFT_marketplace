@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.20;
+pragma solidity 0.8.25;
 /**
  * @notice the 'ether' modifier is used to signify units. Some functions use the 'ether' modifier while the currency is in WETH.
  */
@@ -8,9 +8,11 @@ import "./BaseSetUp.sol";
 
 contract BuySale is BaseSetUp {
     function test_Revert_BuySale_If_Balance_Not_Enough() public {
+
         vm.startPrank(seller);
         //Create a sale
         _mkpc.createSale(address(_nft721), 1, 2 ether);
+        vm.stopPrank();
 
         hoax(empty, 1 ether);
         //reverts because there isn't enough ether to cover the price
